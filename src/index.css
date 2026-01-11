@@ -1,0 +1,52 @@
+:root {
+  /* Cores padrão - serão sobrescritas pelas cores da empresa */
+  --primary-color: #001166;
+  --secondary-color: #FFFFFF;
+  --background-color: #F8F9FA;
+  --sidebar-background: #FFFFFF;
+  --primary-color-light: rgba(0, 17, 102, 0.1);
+  --primary-color-dark: #000d4d;
+  --button-text-color: #FFFFFF; /* Cor do texto dos botões (calculada automaticamente) */
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--secondary-color, #333);
+  background-color: var(--background-color, #F8F9FA);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Garantir que os botões usem as cores corretas das configurações */
+.button-primary {
+  background: var(--primary-color, #001166) !important;
+  color: var(--button-text-color, #FFFFFF) !important;
+}
+
+.button-outline {
+  color: var(--secondary-color, #333) !important;
+  border-color: var(--secondary-color, #333) !important;
+}
+
+.button-outline:hover {
+  background: var(--secondary-color, #333) !important;
+  color: var(--button-text-color, #FFFFFF) !important;
+}

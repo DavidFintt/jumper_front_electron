@@ -1,0 +1,78 @@
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-color);
+  padding: 20px;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 450px;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.login-logo {
+  max-width: 200px;
+  height: auto;
+  margin: 0 auto 20px;
+  display: block;
+}
+
+.login-header h1 {
+  color: var(--primary-color);
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+}
+
+.login-header p {
+  color: #666;
+  font-size: 16px;
+  margin: 0;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.login-footer {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.login-footer p {
+  color: #999;
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Corrigir cor das labels dos inputs no login */
+.login-container .input-label {
+  color: #333 !important;
+}
+
+.login-container .input-field {
+  color: #333 !important;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .login-header h1 {
+    font-size: 28px;
+  }
+
+  .login-header p {
+    font-size: 14px;
+  }
+}

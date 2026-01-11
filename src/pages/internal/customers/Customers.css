@@ -1,0 +1,635 @@
+/* ==================================
+   CUSTOMERS CONTAINER
+   ================================== */
+.customers-container {
+  padding: 32px;
+  background-color: var(--background-color, #F8F9FA);
+  min-height: 100vh;
+}
+
+.customers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.customers-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--secondary-color, #1f2937);
+  margin: 0 0 8px 0;
+}
+
+.customers-subtitle {
+  font-size: 16px;
+  color: var(--secondary-color, #6b7280);
+  margin: 0;
+}
+
+/* ==================================
+   STATUS BADGE
+   ================================== */
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.active {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.inactive {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* ==================================
+   ACTION BUTTONS
+   ================================== */
+/* Estilos agora são herdados do DataTable.css para consistência global */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+
+/* ==================================
+   MODAL
+   ================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(17, 24, 39, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: #ffffff; /* Fundo branco fixo */
+  border-radius: 16px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 2px solid #f3f4f6;
+  background: linear-gradient(135deg, var(--primary-color, #001166) 0%, var(--primary-color, #001166) 100%);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+.modal-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--button-text-color, #FFFFFF); /* Texto branco */
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: var(--button-text-color, #FFFFFF);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 24px;
+}
+
+.modal-close:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  color: var(--button-text-color, #FFFFFF);
+  transform: rotate(90deg);
+}
+
+.customer-form {
+  padding: 24px;
+  overflow-y: auto;
+  flex-grow: 1;
+  background-color: #ffffff; /* Fundo branco fixo */
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.full-width {
+  grid-column: span 2;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827; /* Cor escura forte */
+  margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 12px 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827; /* Cor escura forte */
+  transition: all 0.2s ease;
+  font-family: inherit;
+  background-color: #ffffff;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary-color, #001166);
+  box-shadow: 0 0 0 3px var(--primary-color-light, rgba(0, 17, 102, 0.1));
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  margin-top: 10px;
+  background: linear-gradient(135deg, var(--primary-color, #001166) 0%, var(--primary-color, #001166) 100%);
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 17, 102, 0.15);
+  transition: all 0.2s ease;
+}
+
+.checkbox-label:hover {
+  box-shadow: 0 4px 12px rgba(0, 17, 102, 0.25);
+  transform: translateY(-1px);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--button-text-color, #FFFFFF);
+}
+
+.checkbox-label span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--button-text-color, #FFFFFF);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 2px solid #f3f4f6;
+  background-color: #ffffff; /* Fundo branco fixo */
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+
+/* ==================================
+   RESPONSIVE
+   ================================== */
+@media (max-width: 768px) {
+  .customers-container {
+    padding: 20px;
+  }
+
+  .customers-header {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .customers-header h1 {
+    font-size: 24px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group.full-width {
+    grid-column: span 1;
+  }
+
+  .modal-content {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+}
+
+.customers-page .modal-header {
+  background: linear-gradient(90deg, var(--primary-color, #001166) 0%, var(--primary-color-dark, #001166) 100%);
+  color: var(--button-text-color, #FFFFFF);
+  padding: 16px 24px;
+}
+
+.customers-page .modal-header h2 {
+  color: var(--button-text-color, #FFFFFF);
+  font-size: 1.25rem;
+}
+
+.customers-page .modal-close {
+  color: var(--button-text-color, #FFFFFF);
+  opacity: 0.8;
+}
+.customers-page .modal-close:hover {
+  opacity: 1;
+}
+
+.customers-page .modal-body {
+  padding: 24px;
+  background-color: #FFFFFF;
+}
+
+.customers-page .customer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.customers-page .form-group label {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px; /* Adicionado para espaçar do input */
+  display: block; /* Garante que a margem funcione */
+}
+
+.customers-page .form-group input,
+.customers-page .form-group select,
+.customers-page .form-group textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 12px;
+  width: 100%; /* Garante que o input ocupe todo o espaço */
+  box-sizing: border-box; /* Garante que o padding não estoure a largura */
+}
+
+.customers-page .modal-actions {
+  padding: 16px 24px;
+  background-color: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* ==================================
+   SEÇÃO DE DEPENDENTES
+   ================================== */
+.form-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header .section-title {
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
+.no-dependentes {
+  text-align: center;
+  padding: 32px;
+  color: #9ca3af;
+  font-style: italic;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 2px dashed #e5e7eb;
+  margin-top: 16px;
+}
+
+/* Tabela de Dependentes */
+.dependentes-table-container {
+  margin-top: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #ffffff;
+}
+
+.dependentes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dependentes-table thead {
+  background-color: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.dependentes-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dependentes-table tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s ease;
+}
+
+.dependentes-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.dependentes-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.dependentes-table tbody tr.novo-dependente {
+  background-color: #eff6ff;
+  animation: highlightRow 2s ease;
+}
+
+@keyframes highlightRow {
+  0% {
+    background-color: #dbeafe;
+  }
+  100% {
+    background-color: #eff6ff;
+  }
+}
+
+.dependentes-table td {
+  padding: 12px 16px;
+  vertical-align: middle;
+}
+
+.dependentes-table td input {
+  width: 100%;
+}
+
+.td-idade {
+  text-align: center;
+}
+
+.dependente-idade-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.td-checkbox {
+  text-align: center;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.checkbox-label:hover {
+  background-color: #f3f4f6;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-color, #001166);
+}
+
+.checkbox-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  user-select: none;
+}
+
+.td-actions {
+  text-align: center;
+  width: 80px;
+}
+
+.remove-dependente-btn-table {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.remove-dependente-btn-table:hover {
+  background-color: #fecaca;
+  transform: scale(1.1);
+}
+
+.form-group-checkbox {
+  margin-top: 16px;
+}
+
+.form-group-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  background: linear-gradient(135deg, var(--primary-color, #001166) 0%, var(--primary-color, #001166) 100%);
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 17, 102, 0.15);
+  transition: all 0.2s ease;
+  color: var(--button-text-color, #FFFFFF);
+  font-weight: 600;
+}
+
+.form-group-checkbox label:hover {
+  box-shadow: 0 4px 12px rgba(0, 17, 102, 0.25);
+  transform: translateY(-1px);
+}
+
+.form-group-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--button-text-color, #FFFFFF);
+}
+
+.form-group-checkbox-dependente label {
+  min-width: 80px;
+}
+
+.form-group-checkbox-dependente label:hover {
+  background-color: #e0e7ff;
+}
+
+.form-group-checkbox-dependente input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.form-group-checkbox-dependente input[type="checkbox"]:checked + span {
+  /* Pode-se adicionar estilo extra quando checado se necessário */
+}
+
+/* Campo CPF com checkbox inline */
+.cpf-field-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cpf-field-wrapper .form-group-checkbox {
+  margin: 0;
+  min-width: auto;
+  flex-shrink: 0;
+}
+
+.cpf-field-wrapper .form-group-checkbox label {
+  margin: 0;
+  font-size: 14px;
+  white-space: nowrap;
+  padding: 8px 12px;
+  gap: 8px;
+}
+
+.cpf-field-wrapper .form-group-checkbox input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+/* Ajuste para o modal ficar com scroll no body */
+.customers-page .modal-content {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.customers-page .modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.customers-page .modal-header,
+.customers-page .modal-actions {
+  flex-shrink: 0;
+}
+
+.customers-page .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group-checkbox-wrapper {
+  grid-column: 1 / -1; /* Ocupa a largura toda */
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.form-group-checkbox {
+  flex: 1;
+}
+
+.form-group-checkbox label {
+  width: 100%;
+  justify-content: center;
+}
+

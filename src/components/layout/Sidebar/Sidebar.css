@@ -1,0 +1,289 @@
+/* ==================================
+   MAIN STRUCTURE
+   ================================== */
+.sidebar {
+  width: 260px;
+  height: 100vh;
+  background: linear-gradient(
+    to bottom,
+    #ffffff 0%,
+    #ffffff 30%,
+    var(--primary-color-light) 60%,
+    var(--primary-color) 85%,
+    var(--primary-color-dark) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.03);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ==================================
+   HEADER
+   ================================== */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  padding: 32px 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  margin-bottom: 8px;
+}
+
+.sidebar-logo {
+  height: 44px;
+  width: 44px;
+  object-fit: contain;
+  border-radius: 12px;
+  margin-right: 14px;
+  background-color: #fff;
+  padding: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-company-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a202c;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==================================
+   NAVIGATION
+   ================================== */
+.sidebar-nav {
+  flex-grow: 1;
+  padding: 16px 14px;
+  overflow-y: auto;
+}
+
+.sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  color: #4a5568;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-link:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #1a202c;
+  transform: translateX(4px);
+}
+
+.sidebar-link.active {
+  background-color: var(--primary-color-light, #e7f5ff);
+  color: var(--primary-color, #007bff);
+  opacity: 1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+.sidebar-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 4px;
+  background-color: var(--primary-color);
+  border-radius: 0 4px 4px 0;
+}
+
+.sidebar-icon {
+  margin-right: 14px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.sidebar-link.active .sidebar-icon {
+  color: var(--primary-color, #007bff);
+  transform: scale(1.1);
+}
+
+/* ==================================
+   FOOTER
+   ================================== */
+.sidebar-footer {
+  padding: 24px 20px !important;
+  margin-top: auto !important;
+  background: transparent !important;
+  position: relative;
+}
+
+/* Linha decorativa sutil no topo do footer */
+.sidebar-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  width: 80%;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent);
+  border-radius: 2px;
+}
+
+.sidebar-footer .user-info {
+  display: flex;
+  align-items: center;
+  padding: 14px;
+  border-radius: 16px;
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(12px);
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.sidebar-footer .user-info:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-footer .user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: var(--primary-color, #007bff);
+  color: var(--button-text-color, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 18px;
+  margin-right: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-footer .user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.sidebar-footer .user-details .user-name {
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  color: #ffffff !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.3px;
+}
+
+.sidebar-footer .user-details .user-role {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #a0aec0 !important;
+  opacity: 0.9;
+}
+
+.sidebar-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.sidebar-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sidebar-action-btn:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.sidebar-action-btn.logout {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+  border: 1px solid #b91c1c !important;
+}
+
+.sidebar-action-btn.logout:hover {
+  background-color: #b91c1c !important;
+  color: #ffffff !important;
+  border-color: #991b1b !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4) !important;
+}
+
+/* ==================================
+   RESPONSIVENESS
+   ================================== */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 80px;
+  }
+
+  .sidebar-company-name,
+  .sidebar-link span,
+  .user-details,
+  .sidebar-action-btn span {
+    display: none;
+  }
+  
+  .sidebar-header, .sidebar-link {
+    justify-content: center;
+    padding: 16px;
+  }
+  
+  .sidebar-icon {
+    margin-right: 0;
+  }
+
+  .sidebar-footer {
+    padding: 16px 8px;
+  }
+
+  .user-info {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .user-avatar {
+    margin-right: 0;
+  }
+
+  .sidebar-actions {
+    flex-direction: column;
+  }
+}
+

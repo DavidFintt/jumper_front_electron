@@ -1,0 +1,341 @@
+.admin-users-container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.admin-users-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-users-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #333 !important;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-users-subtitle {
+  color: #666 !important;
+  margin: 0.5rem 0 0 0;
+  font-size: 1rem;
+}
+
+.admin-users-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+}
+
+.status-filter-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.status-filter-container label {
+  font-weight: 600;
+  color: #333 !important;
+  font-size: 0.875rem;
+}
+
+.status-filter-select {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #333 !important;
+  background-color: white !important;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+/* Tabela customizada */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.admin-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #333;
+}
+
+.admin-users-table thead {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.admin-users-table thead th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #333 !important;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-users-table tbody tr {
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color 0.2s;
+}
+
+.admin-users-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.admin-users-table tbody td {
+  padding: 1rem;
+  color: #333 !important;
+  vertical-align: middle;
+}
+
+/* Status Badge */
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge.inactive {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.action-buttons button {
+  color: #333 !important;
+  border-color: #333 !important;
+}
+
+.action-buttons button:hover {
+  color: #333 !important;
+  border-color: #333 !important;
+}
+
+/* Botão Inativar (danger) deve ter texto branco */
+.action-buttons button[class*="danger"] {
+  color: white !important;
+  border-color: #dc2626 !important;
+}
+
+.action-buttons button[class*="danger"]:hover {
+  color: white !important;
+}
+
+/* Botão Ativar (primary) deve ter texto branco */
+.action-buttons button[class*="primary"] {
+  color: white !important;
+  border-color: var(--primary-color) !important;
+  background-color: var(--primary-color) !important;
+}
+
+.action-buttons button[class*="primary"]:hover {
+  color: white !important;
+}
+
+.action-buttons button svg {
+  color: currentColor !important;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+/* Forçar cores corretas em todos os inputs do modal */
+.admin-users-container .modal-overlay .input-label,
+.admin-users-container .modal-overlay label {
+  color: #333 !important;
+}
+
+.admin-users-container .modal-overlay .input-field,
+.admin-users-container .modal-overlay input,
+.admin-users-container .modal-overlay select,
+.admin-users-container .modal-overlay textarea {
+  color: #333 !important;
+  background-color: white !important;
+}
+
+.admin-users-container .modal-overlay .input-field::placeholder,
+.admin-users-container .modal-overlay input::placeholder,
+.admin-users-container .modal-overlay textarea::placeholder {
+  color: #999 !important;
+  opacity: 1 !important;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background-color: #f5f5f5;
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Form Styles */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #333 !important;
+  font-size: 0.875rem;
+}
+
+.admin-users-container input,
+.admin-users-container select,
+.admin-users-container textarea,
+.admin-users-container .form-group input,
+.admin-users-container .modal-content input,
+.admin-users-container .modal-content select,
+.admin-users-container .modal-content textarea {
+  color: #333 !important;
+  background-color: white !important;
+}
+
+.admin-users-container input::placeholder,
+.admin-users-container .modal-content input::placeholder {
+  color: #999 !important;
+  opacity: 1 !important;
+}
+
+.checkbox-group {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  margin: 0;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .admin-users-container {
+    padding: 1rem;
+  }
+
+  .admin-users-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-users-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-content {
+    max-height: 95vh;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+}
+

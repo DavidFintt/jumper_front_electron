@@ -1,0 +1,48 @@
+.alert {
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.alert-error {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+}
+
+.alert-success {
+  background-color: #efe;
+  border: 1px solid #cfc;
+  color: #3c3;
+}
+
+.alert-warning {
+  background-color: #ffc;
+  border: 1px solid #ffb;
+  color: #cc6600;
+}
+
+.alert-info {
+  background-color: #eff;
+  border: 1px solid #cff;
+  color: #0099cc;
+}
+
+
+
+
+
+
+
+
+
+
+

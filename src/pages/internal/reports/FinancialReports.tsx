@@ -122,6 +122,19 @@ const UserSalesDetailModal: React.FC<{
                             <span>{formatDate(order.created_at)}</span>
                           </div>
                         </div>
+                        {order.payment_details && order.payment_details.length > 0 && (
+                          <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f8fafc', borderRadius: '6px', fontSize: '0.85rem' }}>
+                            <div style={{ fontWeight: 600, color: '#64748b', marginBottom: '4px', fontSize: '0.8rem' }}>FORMAS DE PAGAMENTO:</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                              {order.payment_details.map((pd: any) => (
+                                <div key={pd.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                                  <span style={{ color: '#64748b' }}>{pd.payment_type_name}:</span>
+                                  <span style={{ fontWeight: 600, color: '#1e293b' }}>{formatCurrency(pd.amount)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         {order.items && order.items.length > 0 && (
                           <div className="order-items">
                             <div className="items-header">Itens da Comanda:</div>
@@ -510,11 +523,27 @@ const CashRegisterDetailModal: React.FC<{
                 <h3><FiTrendingUp /> Resumo Financeiro</h3>
                 <div className="values-grid">
                   <div className="value-card"><span className="label">Valor Inicial</span><span className="value neutral">{formatCurrency(details.opening_amount)}</span></div>
-                  <div className="value-card"><span className="label">Vendas Totais</span><span className="value neutral">{formatCurrency(details.total_sales)}</span></div>
+                  <div className="value-card"><span className="label">Vendas em Dinheiro</span><span className="value neutral">{formatCurrency(details.total_sales)}</span></div>
                   <div className="value-card"><span className="label">Valor Esperado</span><span className="value neutral">{formatCurrency(details.expected_closing_amount)}</span></div>
                   <div className="value-card"><span className="label">Valor Final</span><span className="value neutral">{formatCurrency(details.closing_amount)}</span></div>
                   <div className="value-card"><span className="label">Diferença</span><span className={`value ${details.difference > 0 ? 'positive' : details.difference < 0 ? 'negative' : 'neutral'}`}>{formatCurrency(details.difference)}</span></div>
                 </div>
+                
+                {details.payment_breakdown && Object.keys(details.payment_breakdown).length > 0 && (
+                  <div style={{ marginTop: '20px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: '#64748b', fontWeight: 600 }}>FORMAS DE PAGAMENTO</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+                      {Object.entries(details.payment_breakdown).map(([type, value]: [string, any]) => (
+                        value > 0 && (
+                          <div key={type} style={{ padding: '8px 12px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>{type}</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1e293b' }}>{formatCurrency(value)}</div>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Seção de Sangrias */}
@@ -631,6 +660,23 @@ const CashRegisterDetailModal: React.FC<{
                                   </li>
                                 ))}
                               </ul>
+                              
+                              {/* Formas de Pagamento */}
+                              {order.payment_details && order.payment_details.length > 0 && (
+                                <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
+                                  <div style={{ fontWeight: 600, marginBottom: '8px', fontSize: '0.85rem', color: '#64748b' }}>
+                                    FORMAS DE PAGAMENTO:
+                                  </div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    {order.payment_details.map((pd: any) => (
+                                      <div key={pd.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', backgroundColor: 'white', borderRadius: '4px', border: '1px solid #e2e8f0', fontSize: '0.9rem' }}>
+                                        <span style={{ color: '#64748b', fontWeight: 500 }}>{pd.payment_type_name}:</span>
+                                        <span style={{ fontWeight: 700, color: '#1e293b' }}>{formatCurrency(pd.amount)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                               
                               {/* Ajustes de Tempo Adicional */}
                               {order.time_adjustments && order.time_adjustments.length > 0 && (
@@ -1129,6 +1175,19 @@ const FinancialReports: React.FC = () => {
                                       {formatMoney(cr.total_sales)}
                                     </span>
                                   </div>
+                                  {cr.payment_breakdown && Object.keys(cr.payment_breakdown).length > 0 && (
+                                    <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #f3f4f6' }}>
+                                      <span className="cash-label" style={{ display: 'block', marginBottom: '4px', fontSize: '0.85rem', color: '#6b7280' }}>Formas de Pagamento:</span>
+                                      {Object.entries(cr.payment_breakdown).map(([type, value]: [string, any]) => (
+                                        value > 0 && (
+                                          <div key={type} className="cash-info-row" style={{ fontSize: '0.85rem' }}>
+                                            <span className="cash-label" style={{ textTransform: 'capitalize' }}>{type}:</span>
+                                            <span className="cash-value">{formatMoney(value)}</span>
+                                          </div>
+                                        )
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                                 
                                 <div className="cash-card-footer">

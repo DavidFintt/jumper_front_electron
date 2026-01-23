@@ -247,3 +247,116 @@
   background-color: #f9fafb;
   border-top: 1px solid #e5e7eb;
 }
+
+/* Equipment Units Modal */
+.units-modal {
+  max-width: 900px !important;
+}
+
+.units-modal .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.unit-form {
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.unit-form .form-row {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 2fr;
+  gap: 16px;
+  align-items: end;
+}
+
+.units-list h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 16px;
+}
+
+.units-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.unit-card {
+  background: #ffffff;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s;
+}
+
+.unit-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.unit-card.inactive {
+  opacity: 0.6;
+  background: #f3f4f6;
+}
+
+.unit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.unit-number {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.unit-status {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.unit-status.status-available {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.unit-status.status-in_use {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.unit-status.status-maintenance {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.unit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.empty-message {
+  text-align: center;
+  padding: 32px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Icon Button Manage */
+.icon-button.manage {
+  color: #7c3aed;
+}
+
+.icon-button.manage:hover {
+  background-color: rgba(124, 58, 237, 0.1);
+}

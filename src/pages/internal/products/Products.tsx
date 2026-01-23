@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Layout } from '../../../components/layout';
 import { Button, Alert, DataTable, Input } from '../../../components/ui';
 import type { Column, Filter } from '../../../components/ui';
-import { productService } from '../../../services';
-import type { Product, ProductType } from '../../../services/types';
-import { FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiX, FiSave } from 'react-icons/fi';
+import { productService, equipmentUnitService } from '../../../services';
+import type { Product, ProductType, EquipmentUnit } from '../../../services/types';
+import { FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiX, FiSave, FiPackage } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import './Products.css';
 
@@ -28,6 +28,21 @@ export const Products: React.FC = () => {
     is_active: true,
     duration: '', // Para tempo de uso
   });
+
+  // Equipment Units state
+  const [showUnitsModal, setShowUnitsModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [equipmentUnits, setEquipmentUnits] = useState<EquipmentUnit[]>([]);
+  const [unitFormData, setUnitFormData] = useState({
+    number: '',
+    status: 'available',
+    is_active: true,
+  });
+  const [editingUnit, setEditingUnit] = useState<EquipmentUnit | null>(null);
+  
+  // Temporary units for equipment during creation/edit
+  const [tempUnits, setTempUnits] = useState<string[]>([]);
+  const [newUnitNumber, setNewUnitNumber] = useState('');
 
   // Get company ID from localStorage
   const userData = JSON.parse(localStorage.getItem('userData') || '{}');
@@ -77,6 +92,8 @@ export const Products: React.FC = () => {
       is_active: true,
       duration: '',
     });
+    setTempUnits([]);
+    setNewUnitNumber('');
     setError(null);
     setSuccess(null);
   };
@@ -92,9 +109,13 @@ export const Products: React.FC = () => {
       is_active: true,
       duration: '',
     });
+    setTempUnits([]);
+    setNewUnitNumber('');
+    setEquipmentUnits([]);
   };
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = async (product: Product) => {
+    console.log('handleEdit chamado para produto:', product);
     setEditingProduct(product);
     
     // Se for tipo 1 (Tempo de uso), extrai a duração do nome (se aplicável)
@@ -120,6 +141,13 @@ export const Products: React.FC = () => {
       }
     }
     
+    // Se for equipamento, carrega as unidades existentes
+    console.log('É equipamento?', product.product_type_name === 'Equipamento', 'Tipo:', product.product_type_name);
+    if (product.product_type_name === 'Equipamento') {
+      console.log('Carregando unidades para produto ID:', product.id);
+      await loadEquipmentUnits(product.id);
+    }
+    
     setFormData({
       name: product.name,
       description: product.description || '',
@@ -128,6 +156,8 @@ export const Products: React.FC = () => {
       is_active: product.is_active,
       duration: duration,
     });
+    setTempUnits([]);
+    setNewUnitNumber('');
     setShowModal(true);
     setError(null);
     setSuccess(null);
@@ -149,6 +179,136 @@ export const Products: React.FC = () => {
     } catch (err: any) {
       toast.error('Erro ao conectar ao servidor');
     }
+  };
+
+  // Temporary Units Functions (for equipment during creation)
+  const handleAddTempUnit = () => {
+    const trimmed = newUnitNumber.trim();
+    console.log('handleAddTempUnit chamado. Novo número:', trimmed);
+    console.log('TempUnits atual:', tempUnits);
+    
+    if (!trimmed) {
+      toast.error('Digite um número para a unidade');
+      return;
+    }
+    if (tempUnits.includes(trimmed)) {
+      toast.error('Este número já foi adicionado');
+      return;
+    }
+    // Verifica se já existe nas unidades do produto (quando editando)
+    if (equipmentUnits.some(u => u.number === trimmed)) {
+      toast.error('Este número já existe para este equipamento');
+      return;
+    }
+    
+    const newTempUnits = [...tempUnits, trimmed];
+    console.log('Nova lista de tempUnits:', newTempUnits);
+    setTempUnits(newTempUnits);
+    setNewUnitNumber('');
+    toast.success(`Unidade #${trimmed} adicionada!`);
+  };
+
+  const handleRemoveTempUnit = (number: string) => {
+    setTempUnits(tempUnits.filter(u => u !== number));
+  };
+
+  // Equipment Units Functions
+  const handleManageUnits = async (product: Product) => {
+    setSelectedProduct(product);
+    setShowUnitsModal(true);
+    await loadEquipmentUnits(product.id);
+  };
+
+  const loadEquipmentUnits = async (productId: number) => {
+    console.log('loadEquipmentUnits chamado para produto ID:', productId);
+    try {
+      const response = await equipmentUnitService.list(productId);
+      console.log('Resposta do loadEquipmentUnits:', response);
+      if (response.success) {
+        const units = response.data || [];
+        console.log('Unidades carregadas:', units);
+        setEquipmentUnits(units);
+      } else {
+        console.error('Erro ao carregar unidades:', response.error);
+        toast.error(response.error || 'Erro ao carregar unidades');
+      }
+    } catch (err: any) {
+      console.error('Erro ao conectar ao servidor:', err);
+      toast.error('Erro ao conectar ao servidor');
+    }
+  };
+
+  const handleSubmitUnit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedProduct) return;
+
+    try {
+      let response;
+      if (editingUnit) {
+        response = await equipmentUnitService.update(editingUnit.id, unitFormData);
+      } else {
+        response = await equipmentUnitService.create({
+          product: selectedProduct.id,
+          ...unitFormData,
+        });
+      }
+
+      if (response.success) {
+        toast.success(editingUnit ? 'Unidade atualizada com sucesso!' : 'Unidade criada com sucesso!');
+        setUnitFormData({ number: '', status: 'available', is_active: true });
+        setEditingUnit(null);
+        loadEquipmentUnits(selectedProduct.id);
+      } else {
+        if (typeof response.error === 'object' && response.error !== null) {
+          Object.values(response.error).forEach(errors => {
+            const errorMessages = Array.isArray(errors) ? errors : [errors];
+            errorMessages.forEach(error => toast.error(error));
+          });
+        } else {
+          toast.error(response.error || 'Erro ao salvar unidade');
+        }
+      }
+    } catch (err: any) {
+      toast.error('Erro ao conectar ao servidor');
+    }
+  };
+
+  const handleEditUnit = (unit: EquipmentUnit) => {
+    setEditingUnit(unit);
+    setUnitFormData({
+      number: unit.number,
+      status: unit.status,
+      is_active: unit.is_active,
+    });
+  };
+
+  const handleDeleteUnit = async (unit: EquipmentUnit) => {
+    if (!window.confirm(`Tem certeza que deseja deletar a unidade "${unit.number}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await equipmentUnitService.delete(unit.id);
+      if (response.success) {
+        toast.success('Unidade deletada com sucesso!');
+        if (selectedProduct) {
+          loadEquipmentUnits(selectedProduct.id);
+        }
+      } else {
+        toast.error(response.error || 'Erro ao deletar unidade');
+      }
+    } catch (err: any) {
+      toast.error('Erro ao conectar ao servidor');
+    }
+  };
+
+  const handleCloseUnitsModal = () => {
+    setShowUnitsModal(false);
+    setSelectedProduct(null);
+    setEquipmentUnits([]);
+    setUnitFormData({ number: '', status: 'available', is_active: true });
+    setEditingUnit(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -250,6 +410,58 @@ export const Products: React.FC = () => {
       console.log('Resposta do backend:', response);
 
       if (response.success) {
+        const savedProduct = response.data;
+        console.log('Produto salvo:', savedProduct);
+        
+        // Se for equipamento e tem unidades temporárias, criar as unidades
+        // APENAS quando estiver CRIANDO um produto novo (não editando)
+        const isEquipment = selectedType?.name === 'Equipamento';
+        const isCreating = !editingProduct;
+        console.log('É equipamento?', isEquipment, 'Está criando?', isCreating, 'Unidades temporárias:', tempUnits);
+        
+        if (isEquipment && isCreating && tempUnits.length > 0 && savedProduct?.id) {
+          console.log('Criando unidades para o produto ID:', savedProduct.id);
+          let createdCount = 0;
+          let errorCount = 0;
+          
+          for (const unitNumber of tempUnits) {
+            try {
+              const unitData = {
+                product: savedProduct.id,
+                number: unitNumber,
+                status: 'available',
+                is_active: true,
+              };
+              console.log('Criando unidade:', unitData);
+              
+              const unitResponse = await equipmentUnitService.create(unitData);
+              console.log('Resposta da criação da unidade:', unitResponse);
+              
+              if (unitResponse.success) {
+                createdCount++;
+              } else {
+                errorCount++;
+                console.error(`Erro ao criar unidade ${unitNumber}:`, unitResponse.error);
+                const errorMsg = unitResponse.details?.non_field_errors?.[0] || 
+                                unitResponse.details?.number?.[0] || 
+                                unitResponse.error || 
+                                'Erro desconhecido';
+                toast.error(`Erro ao criar unidade ${unitNumber}: ${errorMsg}`);
+              }
+            } catch (err: any) {
+              errorCount++;
+              console.error(`Erro ao criar unidade ${unitNumber}:`, err);
+              toast.error(`Erro ao criar unidade ${unitNumber}`);
+            }
+          }
+          
+          if (createdCount > 0) {
+            toast.success(`${createdCount} unidade(s) criada(s) com sucesso!`);
+          }
+        } else if (isEquipment && !isCreating && tempUnits.length > 0) {
+          toast.info('Para adicionar ou editar unidades, use o botão "Gerenciar Unidades" na lista de produtos.');
+        }
+        
         toast.success(editingProduct ? 'Produto atualizado com sucesso!' : 'Produto cadastrado com sucesso!');
         loadProducts();
         handleCloseModal();
@@ -304,16 +516,28 @@ export const Products: React.FC = () => {
     {
       key: 'actions',
       label: 'Ações',
-      render: (product) => (
-        <div className="action-buttons">
-          <button onClick={() => handleEdit(product)} className="icon-button edit" title="Editar">
-            <FiEdit2 />
-          </button>
-          <button onClick={() => handleDelete(product)} className="icon-button delete" title="Desativar">
-            <FiTrash2 />
-          </button>
-        </div>
-      ),
+      render: (product) => {
+        const isEquipment = product.product_type_name === 'Equipamento';
+        return (
+          <div className="action-buttons">
+            {isEquipment && (
+              <button 
+                onClick={() => handleManageUnits(product)} 
+                className="icon-button manage" 
+                title="Gerenciar Unidades"
+              >
+                <FiPackage />
+              </button>
+            )}
+            <button onClick={() => handleEdit(product)} className="icon-button edit" title="Editar">
+              <FiEdit2 />
+            </button>
+            <button onClick={() => handleDelete(product)} className="icon-button delete" title="Desativar">
+              <FiTrash2 />
+            </button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -366,6 +590,114 @@ export const Products: React.FC = () => {
             searchPlaceholder="Buscar por nome..."
             emptyMessage="Nenhum produto cadastrado"
           />
+        )}
+
+        {/* Modal de Gerenciar Unidades */}
+        {showUnitsModal && selectedProduct && (
+          <div className="modal-overlay" onClick={handleCloseUnitsModal}>
+            <div className="modal-content units-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Gerenciar Unidades - {selectedProduct.name}</h2>
+                <button className="modal-close" onClick={handleCloseUnitsModal}><FiX /></button>
+              </div>
+
+              <div className="modal-body">
+                <form onSubmit={handleSubmitUnit} className="unit-form">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <Input
+                        label={editingUnit ? "Editar Número" : "Novo Número *"}
+                        id="unit_number"
+                        value={unitFormData.number}
+                        onChange={(e) => setUnitFormData({ ...unitFormData, number: e.target.value })}
+                        placeholder="Ex: 1, 2, A1, B2"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="unit_status">Status</label>
+                      <select
+                        id="unit_status"
+                        value={unitFormData.status}
+                        onChange={(e) => setUnitFormData({ ...unitFormData, status: e.target.value })}
+                      >
+                        <option value="available">Disponível</option>
+                        <option value="in_use">Em Uso</option>
+                        <option value="maintenance">Manutenção</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
+                      <label className="checkbox-label" style={{ marginBottom: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={unitFormData.is_active}
+                          onChange={(e) => setUnitFormData({ ...unitFormData, is_active: e.target.checked })}
+                        />
+                        <span>Ativo</span>
+                      </label>
+                    </div>
+
+                    <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+                      <Button type="submit" variant="primary" style={{ minWidth: 'auto' }}>
+                        <FiSave /> {editingUnit ? 'Atualizar' : 'Adicionar'}
+                      </Button>
+                      {editingUnit && (
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => {
+                            setEditingUnit(null);
+                            setUnitFormData({ number: '', status: 'available', is_active: true });
+                          }}
+                          style={{ minWidth: 'auto' }}
+                        >
+                          <FiX /> Cancelar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </form>
+
+                <div className="units-list">
+                  <h3>Unidades Cadastradas ({equipmentUnits.length})</h3>
+                  {equipmentUnits.length === 0 ? (
+                    <p className="empty-message">Nenhuma unidade cadastrada</p>
+                  ) : (
+                    <div className="units-grid">
+                      {equipmentUnits.map((unit) => (
+                        <div key={unit.id} className={`unit-card ${!unit.is_active ? 'inactive' : ''}`}>
+                          <div className="unit-header">
+                            <span className="unit-number">#{unit.number}</span>
+                            <span className={`unit-status status-${unit.status}`}>
+                              {unit.status_display}
+                            </span>
+                          </div>
+                          <div className="unit-actions">
+                            <button 
+                              onClick={() => handleEditUnit(unit)} 
+                              className="icon-button edit" 
+                              title="Editar"
+                            >
+                              <FiEdit2 />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteUnit(unit)} 
+                              className="icon-button delete" 
+                              title="Deletar"
+                            >
+                              <FiTrash2 />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Modal de Cadastro/Edição */}
@@ -473,6 +805,114 @@ export const Products: React.FC = () => {
                       <span>Produto ativo</span>
                     </label>
                   </div>
+
+                  {/* Se for Equipamento, mostra seção de unidades */}
+                  {(() => {
+                    const selectedType = productTypes.find(t => t.id.toString() === formData.product_type);
+                    return selectedType?.name === 'Equipamento';
+                  })() && (
+                    <div className="form-group full-width equipment-units-section">
+                      <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '12px', color: '#374151' }}>
+                        Unidades do Equipamento
+                      </h3>
+                      
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                        <Input
+                          placeholder="Ex: 1, 2, A1, B2..."
+                          value={newUnitNumber}
+                          onChange={(e) => setNewUnitNumber(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddTempUnit();
+                            }
+                          }}
+                        />
+                        <Button 
+                          type="button" 
+                          onClick={handleAddTempUnit}
+                          style={{ minWidth: 'auto', whiteSpace: 'nowrap' }}
+                        >
+                          <FiPlus /> Adicionar
+                        </Button>
+                      </div>
+
+                      {/* Unidades Existentes (quando editando) */}
+                      {editingProduct && equipmentUnits.length > 0 && (
+                        <div style={{ marginBottom: '12px' }}>
+                          <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>
+                            Unidades já cadastradas:
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {equipmentUnits.map((unit) => (
+                              <span 
+                                key={unit.id}
+                                style={{
+                                  padding: '4px 10px',
+                                  background: '#e5e7eb',
+                                  borderRadius: '6px',
+                                  fontSize: '13px',
+                                  color: '#374151',
+                                }}
+                              >
+                                #{unit.number}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Unidades Temporárias (serão criadas ao salvar) */}
+                      {tempUnits.length > 0 && (
+                        <div>
+                          <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>
+                            {editingProduct ? 'Novas unidades a adicionar:' : 'Unidades a criar:'}
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {tempUnits.map((unitNumber, index) => (
+                              <span 
+                                key={index}
+                                style={{
+                                  padding: '4px 10px',
+                                  background: '#dbeafe',
+                                  borderRadius: '6px',
+                                  fontSize: '13px',
+                                  color: '#1e40af',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                }}
+                              >
+                                #{unitNumber}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveTempUnit(unitNumber)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    color: '#dc2626',
+                                  }}
+                                  title="Remover"
+                                >
+                                  <FiX size={14} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {tempUnits.length === 0 && (!editingProduct || equipmentUnits.length === 0) && (
+                        <p style={{ fontSize: '13px', color: '#9ca3af', fontStyle: 'italic' }}>
+                          Nenhuma unidade adicionada
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="modal-actions">

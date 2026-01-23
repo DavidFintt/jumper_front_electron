@@ -1,1 +1,9 @@
-"use strict";const e=require("electron");console.log("PRELOAD CARREGOU");e.contextBridge.exposeInMainWorld("api",{getPrinters:async()=>await e.ipcRenderer.invoke("get-printers")});
+"use strict";
+const electron = require("electron");
+console.log("PRELOAD CARREGOU");
+electron.contextBridge.exposeInMainWorld("api", {
+  getPrinters: async () => {
+    const printers = await electron.ipcRenderer.invoke("get-printers");
+    return printers;
+  }
+});

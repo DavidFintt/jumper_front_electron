@@ -7,11 +7,11 @@ import { FiPlus, FiClock, FiAlertCircle, FiCheckCircle, FiX, FiSave, FiActivity,
 import { FaWhatsapp } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './Dashboard.css';
-import { jumpUsageService, orderService, cashRegisterService, companyPrinterService, userService } from '../../../services';
+import { jumpUsageService, orderService, cashRegisterService, companyPrinterService, userService, equipmentUnitService } from '../../../services';
 import { customerService } from '../../../services';
 import { productService } from '../../../services';
 import { api } from '../../../services/api';
-import type { Product, Order, CashRegister, OrderItem, JumpUsage, User } from '../../../services/types';
+import type { Product, Order, CashRegister, OrderItem, JumpUsage, User, EquipmentUnit } from '../../../services/types';
 
 interface CustomerOption {
   id: number;
@@ -118,6 +118,13 @@ const Dashboard: React.FC = () => {
   const [selectedConsumable, setSelectedConsumable] = useState<Product | null>(null);
   const [consumableQuantity, setConsumableQuantity] = useState<number>(1);
   
+  // Equipment states
+  const [equipmentProducts, setEquipmentProducts] = useState<Product[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<Product | null>(null);
+  const [availableUnits, setAvailableUnits] = useState<EquipmentUnit[]>([]);
+  const [selectedUnit, setSelectedUnit] = useState<EquipmentUnit | null>(null);
+  const [loadingUnits, setLoadingUnits] = useState(false);
+  
   // Memo para filtrar comandas
   const filteredOrders = useMemo(() => {
     if (!comandaSearchTerm) {
@@ -146,6 +153,11 @@ const Dashboard: React.FC = () => {
   const [showAdjustTimeModal, setShowAdjustTimeModal] = useState(false);
   const [adjustingTimeItem, setAdjustingTimeItem] = useState<any>(null);
   const [adjustmentReason, setAdjustmentReason] = useState<string>('');
+  
+  const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
+  const [paymentDetails, setPaymentDetails] = useState<{payment_type: number, amount: string}[]>([]);
+  const [paymentSectionExpanded, setPaymentSectionExpanded] = useState(false);
+  const [summarySectionExpanded, setSummarySectionExpanded] = useState(true);
   
   // Estados para modal de cadastro rápido de cliente
   const [showQuickCustomerModal, setShowQuickCustomerModal] = useState(false);
@@ -475,6 +487,7 @@ const Dashboard: React.FC = () => {
     loadFiscalPrinter();
     loadA4Printer();
     loadCompanyUsers();
+    loadPaymentTypes();
     // Atualizar o timer a cada segundo
     const interval = setInterval(() => {
       setCurrentTime(new Date());
@@ -619,6 +632,18 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const loadPaymentTypes = async () => {
+    try {
+      const response = await api.get('/payment-types/');
+      console.log('Payment Types carregados:', response);
+      if (response) {
+        setPaymentTypes(response);
+      }
+    } catch (err: any) {
+      console.error('Error loading payment types:', err);
+    }
+  };
+
   const loadCustomers = async () => {
     try {
       if (!companyId) {
@@ -696,6 +721,40 @@ const Dashboard: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Error loading consumable products:', err);
+    }
+  };
+
+  const loadEquipmentProducts = async () => {
+    try {
+      const response = await productService.list({ 
+        company_id: companyId, 
+        product_type_name: 'Equipamento',
+        is_active: true 
+      });
+      if (response.success) {
+        setEquipmentProducts(response.data || []);
+      }
+    } catch (err: any) {
+      console.error('Error loading equipment products:', err);
+    }
+  };
+
+  const loadAvailableUnits = async (productId: number) => {
+    try {
+      setLoadingUnits(true);
+      const response = await equipmentUnitService.list(productId, 'available');
+      if (response.success) {
+        const units = (response.data || []).filter(u => u.is_active);
+        setAvailableUnits(units);
+        if (units.length === 0) {
+          toast.warning('Nenhuma unidade disponível para este equipamento');
+        }
+      }
+    } catch (err: any) {
+      console.error('Error loading available units:', err);
+      toast.error('Erro ao carregar unidades disponíveis');
+    } finally {
+      setLoadingUnits(false);
     }
   };
 
@@ -1262,8 +1321,12 @@ const Dashboard: React.FC = () => {
     loadOrder(jump.id);
     loadProducts(); // Carrega produtos de "Tempo de uso" para horas extras
     loadConsumableProducts();
+    loadEquipmentProducts();
     setSelectedConsumable(null);
     setConsumableQuantity(1);
+    setSelectedEquipment(null);
+    setSelectedUnit(null);
+    setAvailableUnits([]);
   };
 
   const handleCloseFinishModal = () => {
@@ -1273,6 +1336,9 @@ const Dashboard: React.FC = () => {
     setCurrentOrder(null);
     setSelectedConsumable(null);
     setConsumableQuantity(1);
+    setSelectedEquipment(null);
+    setSelectedUnit(null);
+    setAvailableUnits([]);
   };
 
   // Funções para modal de comanda
@@ -1302,8 +1368,9 @@ const Dashboard: React.FC = () => {
       console.error('Erro ao carregar comanda:', error);
       toast.error('Erro ao carregar comanda');
     }
-    // Carregar produtos consumíveis
+    // Carregar produtos consumíveis e equipamentos
     loadConsumableProducts();
+    loadEquipmentProducts();
     setShowComandaModal(true);
   };
 
@@ -1315,6 +1382,7 @@ const Dashboard: React.FC = () => {
     setComandaTotal('0');
     setAdditionalTimeAdjustments({});
     setClosePreview(null);
+    setPaymentDetails([]);
   };
 
   const imprimirCupomFiscal = async (cupomTexto: string) => {
@@ -1527,33 +1595,67 @@ const Dashboard: React.FC = () => {
   const handleFinalizarComanda = async () => {
     if (!selectedComanda) return;
 
+    const allItems = [
+      ...(selectedComanda?.items || []),
+      ...(closePreview?.additional_items || []),
+    ];
+    
+    let totalComanda = 0;
+    
+    allItems.forEach((item: any) => {
+      if (item.pago) return;
+      
+      if (item.item_type === 'additional_time') {
+        const jumpMatch = item.description?.match(/Jump #(\d+)/);
+        const jumpId = jumpMatch ? parseInt(jumpMatch[1]) : null;
+        
+        if (jumpId && additionalTimeAdjustments[jumpId] !== undefined) {
+          const adjustedQuantity = additionalTimeAdjustments[jumpId].newQuantity;
+          const unitPrice = parseFloat(item.subtotal) / item.quantity;
+          totalComanda += adjustedQuantity * unitPrice;
+        } else {
+          totalComanda += parseFloat(item.subtotal || 0);
+        }
+      } else {
+        totalComanda += parseFloat(item.subtotal || 0);
+      }
+    });
+
+    const totalPago = paymentDetails.reduce((sum, detail) => sum + parseFloat(detail.amount || '0'), 0);
+    
+    if (Math.abs(totalPago - totalComanda) > 0.01) {
+      toast.error(`O valor total dos pagamentos (R$ ${totalPago.toFixed(2)}) não corresponde ao total da comanda (R$ ${totalComanda.toFixed(2)})`);
+      return;
+    }
+    
+    if (paymentDetails.length === 0) {
+      toast.error('Adicione pelo menos uma forma de pagamento');
+      return;
+    }
+
     try {
       setComandaLoading(true);
       setError(null);
       
-      // Preparar os ajustes de tempo adicional (se houver)
       const adjustments = Object.keys(additionalTimeAdjustments).length > 0 
         ? additionalTimeAdjustments 
         : undefined;
       
-      const response = await orderService.close(selectedComanda.id, companyId, adjustments);
+      const response = await orderService.close(selectedComanda.id, companyId, adjustments, paymentDetails);
       
       if (response.success) {
-        // Mostrar mensagem de sucesso com informação sobre jumps finalizados
         const message = response.message || 'Comanda finalizada com sucesso!';
         toast.success(message);
         
-        // Imprimir cupom fiscal se disponível
         if (response.cupom_fiscal) {
           imprimirCupomFiscal(response.cupom_fiscal);
         }
         
         handleCloseComandaModal();
         
-        // Recarregar dados
         await loadActiveJumps();
         await loadOrders();
-        await loadCurrentCashRegister(); // Atualizar valor do caixa
+        await loadCurrentCashRegister();
       } else {
         toast.error(response.error || 'Erro ao finalizar comanda');
       }
@@ -1810,6 +1912,59 @@ const Dashboard: React.FC = () => {
     } catch (err: any) {
       setError(err.message || 'Erro ao adicionar consumível');
       setTimeout(() => setError(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddEquipment = async () => {
+    // Proteção contra cliques duplos
+    if (loading) return;
+    
+    if (!selectedEquipment || !currentOrder) {
+      toast.error('Selecione um equipamento');
+      return;
+    }
+
+    if (!selectedUnit) {
+      toast.error('Selecione uma unidade disponível');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Adiciona o item à comanda
+      const response = await orderService.addItem({
+        order: currentOrder.id,
+        product: selectedEquipment.id,
+        item_type: 'consumable', // Equipamentos usam o mesmo tipo
+        quantity: 1, // Equipamento sempre quantidade 1
+        unit_price: selectedEquipment.price,
+        description: `${selectedEquipment.name} - Unidade #${selectedUnit.number}`
+      });
+
+      if (response.success) {
+        // Marca a unidade como "em uso"
+        await equipmentUnitService.update(selectedUnit.id, {
+          status: 'in_use'
+        });
+
+        toast.success(`Equipamento ${selectedEquipment.name} #${selectedUnit.number} adicionado!`);
+        
+        // Recarrega o pedido para atualizar a lista de itens e o total
+        await loadOrder(selectedJump!.id);
+        
+        // Reseta seleções
+        setSelectedEquipment(null);
+        setSelectedUnit(null);
+        setAvailableUnits([]);
+      } else {
+        throw new Error(response.error || 'Erro ao adicionar equipamento');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao adicionar equipamento');
     } finally {
       setLoading(false);
     }
@@ -3401,6 +3556,77 @@ const Dashboard: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Adicionar Equipamentos */}
+                  <div className="modal-section">
+                    <h4 className="modal-section-title"><FiPackage /> Adicionar Equipamentos</h4>
+                    <p className="modal-section-description">
+                      Selecione um equipamento e sua unidade disponível para adicionar à comanda.
+                    </p>
+
+                    {equipmentProducts.length === 0 ? (
+                      <div className="no-consumables">
+                        <p>Nenhum equipamento cadastrado</p>
+                      </div>
+                    ) : (
+                      <div className="consumable-form">
+                        <div className="consumable-select-row">
+                          <select
+                            value={selectedEquipment?.id || ''}
+                            onChange={(e) => {
+                              const product = equipmentProducts.find(p => p.id === parseInt(e.target.value));
+                              setSelectedEquipment(product || null);
+                              setSelectedUnit(null);
+                              setAvailableUnits([]);
+                              if (product) {
+                                loadAvailableUnits(product.id);
+                              }
+                            }}
+                            className="consumable-select"
+                          >
+                            <option value="">Selecione um equipamento</option>
+                            {equipmentProducts.map(product => (
+                              <option key={product.id} value={product.id}>
+                                {product.name} - R$ {parseFloat(product.price).toFixed(2).replace('.', ',')}
+                              </option>
+                            ))}
+                          </select>
+                          
+                          <select
+                            value={selectedUnit?.id || ''}
+                            onChange={(e) => {
+                              const unit = availableUnits.find(u => u.id === parseInt(e.target.value));
+                              setSelectedUnit(unit || null);
+                            }}
+                            className="consumable-select"
+                            disabled={!selectedEquipment || loadingUnits}
+                          >
+                            <option value="">
+                              {loadingUnits ? 'Carregando...' : 'Selecione a unidade'}
+                            </option>
+                            {availableUnits.map(unit => (
+                              <option key={unit.id} value={unit.id}>
+                                Unidade #{unit.number}
+                              </option>
+                            ))}
+                          </select>
+                          
+                          <button
+                            className="add-consumable-btn"
+                            onClick={handleAddEquipment}
+                            disabled={!selectedEquipment || !selectedUnit || loading}
+                          >
+                            Adicionar
+                          </button>
+                        </div>
+                        {availableUnits.length === 0 && selectedEquipment && !loadingUnits && (
+                          <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '8px' }}>
+                            Nenhuma unidade disponível para este equipamento
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="finish-warning">
                     <FiAlertCircle size={20} />
                     <p>Ao finalizar, o tempo adicional (se houver) será calculado automaticamente e adicionado ao pedido. Para gerenciar a comanda completa, acesse a aba "Comandas".</p>
@@ -4188,6 +4414,121 @@ const Dashboard: React.FC = () => {
                       )}
                     </div>
 
+                    {/* Adicionar Equipamentos */}
+                    <div className="modal-section">
+                      <h4 className="modal-section-title"><FiPackage /> Adicionar Equipamentos</h4>
+                      <p className="modal-section-description">
+                        Selecione um equipamento e sua unidade disponível para adicionar à comanda.
+                      </p>
+
+                      {equipmentProducts.length === 0 ? (
+                        <div className="no-consumables">
+                          <p>Nenhum equipamento cadastrado</p>
+                        </div>
+                      ) : (
+                        <div className="consumable-form">
+                          <div className="consumable-select-row">
+                            <select
+                              value={selectedEquipment?.id || ''}
+                              onChange={(e) => {
+                                const product = equipmentProducts.find(p => p.id === parseInt(e.target.value));
+                                setSelectedEquipment(product || null);
+                                setSelectedUnit(null);
+                                setAvailableUnits([]);
+                                if (product) {
+                                  loadAvailableUnits(product.id);
+                                }
+                              }}
+                              className="consumable-select"
+                            >
+                              <option value="">Selecione um equipamento</option>
+                              {equipmentProducts.map(product => (
+                                <option key={product.id} value={product.id}>
+                                  {product.name} - R$ {parseFloat(product.price).toFixed(2).replace('.', ',')}
+                                </option>
+                              ))}
+                            </select>
+                            
+                            <select
+                              value={selectedUnit?.id || ''}
+                              onChange={(e) => {
+                                const unit = availableUnits.find(u => u.id === parseInt(e.target.value));
+                                setSelectedUnit(unit || null);
+                              }}
+                              className="consumable-select"
+                              disabled={!selectedEquipment || loadingUnits}
+                            >
+                              <option value="">
+                                {loadingUnits ? 'Carregando...' : 'Selecione a unidade'}
+                              </option>
+                              {availableUnits.map(unit => (
+                                <option key={unit.id} value={unit.id}>
+                                  Unidade #{unit.number}
+                                </option>
+                              ))}
+                            </select>
+                            
+                            <button
+                              type="button"
+                              className="add-consumable-btn"
+                              onClick={async () => {
+                                if (!selectedComanda || !selectedEquipment || !selectedUnit) return;
+                                try {
+                                  setComandaLoading(true);
+                                  
+                                  // Adiciona o item à comanda
+                                  const response = await orderService.addItem({
+                                    order: selectedComanda.id,
+                                    product: selectedEquipment.id,
+                                    item_type: 'consumable',
+                                    quantity: 1,
+                                    unit_price: selectedEquipment.price,
+                                    description: `${selectedEquipment.name} - Unidade #${selectedUnit.number}`
+                                  });
+
+                                  if (response.success && response.data) {
+                                    // Marca a unidade como "em uso"
+                                    await equipmentUnitService.update(selectedUnit.id, {
+                                      status: 'in_use'
+                                    });
+                                    
+                                    toast.success(`Equipamento ${selectedEquipment.name} #${selectedUnit.number} adicionado!`);
+                                    
+                                    setSelectedEquipment(null);
+                                    setSelectedUnit(null);
+                                    setAvailableUnits([]);
+                                    
+                                    const newItem = response.data as any;
+                                    setComandaItems(prev => [...prev, newItem]);
+                                    setComandaTotal(prev => {
+                                      const newTotal = [...comandaItems, newItem]
+                                        .filter(i => i.item_type !== 'additional_time')
+                                        .reduce((sum, i: any) => sum + parseFloat(i.pago ? '0' : (i.subtotal || '0')), 0);
+                                      return newTotal.toString();
+                                    });
+                                  } else {
+                                    toast.error(response.error || 'Erro ao adicionar equipamento');
+                                  }
+                                } catch (error) {
+                                  toast.error('Erro ao adicionar equipamento à comanda');
+                                } finally {
+                                  setComandaLoading(false);
+                                }
+                              }}
+                              disabled={!selectedComanda || !selectedEquipment || !selectedUnit || comandaLoading}
+                            >
+                              Adicionar
+                            </button>
+                          </div>
+                          {availableUnits.length === 0 && selectedEquipment && !loadingUnits && (
+                            <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '8px' }}>
+                              Nenhuma unidade disponível para este equipamento
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Itens da Comanda */}
                     <div className="order-items-section">
                       <h4 className="modal-section-title"><FiList /> Itens da Comanda</h4>
@@ -4369,18 +4710,45 @@ const Dashboard: React.FC = () => {
                   </div>
 
                   <div className="modal-body">
-                    <Alert variant="warning">
-                      {selectedComanda?.status === 'closed' ? (
-                        <>Esta comanda já foi finalizada. Você pode imprimir o cupom fiscal.</>
-                      ) : (
-                        <><strong>Atenção:</strong> Ao confirmar, esta comanda será finalizada e não poderá ser alterada.</>
-                      )}
-                    </Alert>
-
                     <div className="confirmation-summary">
-                      <h4>Resumo da Comanda</h4>
+                      <div 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '12px',
+                          marginBottom: summarySectionExpanded ? '20px' : '10px',
+                          cursor: 'pointer',
+                          paddingBottom: '12px',
+                          borderBottom: '2px solid #f1f5f9'
+                        }}
+                        onClick={() => {
+                          setSummarySectionExpanded(!summarySectionExpanded);
+                          if (!summarySectionExpanded) {
+                            setPaymentSectionExpanded(false);
+                          }
+                        }}
+                      >
+                        <button
+                          type="button"
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: '#1e293b',
+                            transition: 'transform 0.2s'
+                          }}
+                        >
+                          {summarySectionExpanded ? <FiChevronDown size={20} /> : <FiChevronRight size={20} />}
+                        </button>
+                        <h4 style={{ margin: 0, color: '#1e293b', fontSize: '18px', fontWeight: '600' }}>Resumo da Comanda</h4>
+                      </div>
                       
-                      <div className="summary-info">
+                      {summarySectionExpanded && (
+                        <>
+                          <div className="summary-info">
                         <div className="summary-row">
                           <span className="summary-label">Cliente:</span>
                           <span className="summary-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -4735,8 +5103,234 @@ const Dashboard: React.FC = () => {
                           </span>
                         </div>
                       </div>
+                        </>
+                      )}
                     </div>
                   </div>
+
+                  {selectedComanda?.status !== 'closed' && (() => {
+                    const allItems = [
+                      ...(selectedComanda?.items || []),
+                      ...(closePreview?.additional_items || []),
+                    ];
+                    
+                    let totalReal = 0;
+                    
+                    allItems.forEach((item: any) => {
+                      if (item.pago) return;
+                      
+                      if (item.item_type === 'additional_time') {
+                        const jumpMatch = item.description?.match(/Jump #(\d+)/);
+                        const jumpId = jumpMatch ? parseInt(jumpMatch[1]) : null;
+                        
+                        if (jumpId && additionalTimeAdjustments[jumpId] !== undefined) {
+                          const adjustedQuantity = additionalTimeAdjustments[jumpId].newQuantity;
+                          const unitPrice = parseFloat(item.subtotal) / item.quantity;
+                          totalReal += adjustedQuantity * unitPrice;
+                        } else {
+                          totalReal += parseFloat(item.subtotal || 0);
+                        }
+                      } else {
+                        totalReal += parseFloat(item.subtotal || 0);
+                      }
+                    });
+
+                    return (
+                      <div style={{ marginTop: '25px', padding: '24px', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
+                        <div 
+                          style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            marginBottom: paymentSectionExpanded ? '20px' : '0', 
+                            borderBottom: '2px solid #f1f5f9', 
+                            paddingBottom: '12px',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => {
+                            setPaymentSectionExpanded(!paymentSectionExpanded);
+                            if (!paymentSectionExpanded) {
+                              setSummarySectionExpanded(false);
+                            }
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <button
+                              type="button"
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: '#1e293b',
+                                transition: 'transform 0.2s'
+                              }}
+                            >
+                              {paymentSectionExpanded ? <FiChevronDown size={20} /> : <FiChevronRight size={20} />}
+                            </button>
+                            <h4 style={{ margin: 0, color: '#1e293b', fontSize: '18px', fontWeight: '600' }}>
+                              Formas de Pagamento
+                            </h4>
+                          </div>
+                          <div style={{ display: 'flex', gap: '15px' }}>
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{ display: 'block', fontSize: '12px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Total da Comanda</span>
+                              <span style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b' }}>R$ {totalReal.toFixed(2).replace('.', ',')}</span>
+                            </div>
+                          </div>
+                        </div>
+                      
+                      {paymentSectionExpanded && (
+                        <>
+                          {paymentTypes.length === 0 && (
+                            <div style={{ padding: '12px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', color: '#9a3412', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' }}>
+                              Carregando formas de pagamento...
+                            </div>
+                          )}
+                          
+                          <div style={{ marginBottom: '20px' }}>
+                            {paymentDetails.length === 0 ? (
+                          <div style={{ padding: '30px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '8px', border: '2px dashed #cbd5e1' }}>
+                            <p style={{ marginBottom: '16px', color: '#64748b', fontSize: '14px' }}>Nenhuma forma de pagamento adicionada</p>
+                            <Button
+                              type="button"
+                              variant="primary"
+                              onClick={() => setPaymentDetails([{ payment_type: 0, amount: '' }])}
+                              style={{ padding: '10px 20px' }}
+                            >
+                              Adicionar Primeira Forma de Pagamento
+                            </Button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {paymentDetails.map((detail, index) => (
+                              <div key={index} style={{ display: 'flex', gap: '12px', alignItems: 'center', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                                <div style={{ flex: 1 }}>
+                                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '4px', fontWeight: '600' }}>TIPO</label>
+                                  <select
+                                    value={detail.payment_type}
+                                    onChange={(e) => {
+                                      const newDetails = [...paymentDetails];
+                                      newDetails[index].payment_type = parseInt(e.target.value);
+                                      setPaymentDetails(newDetails);
+                                    }}
+                                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: 'white', fontSize: '14px', outline: 'none' }}
+                                  >
+                                    <option value="">Selecione...</option>
+                                    {paymentTypes.map((pt: any) => (
+                                      <option key={pt.id} value={pt.id}>{pt.name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div style={{ width: '160px' }}>
+                                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '4px', fontWeight: '600' }}>VALOR (R$)</label>
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={detail.amount}
+                                    onChange={(e) => {
+                                      let value = e.target.value;
+                                      value = value.replace(/[^\d.,]/g, '');
+                                      value = value.replace(',', '.');
+                                      const parts = value.split('.');
+                                      if (parts.length > 2) {
+                                        value = parts[0] + '.' + parts.slice(1).join('');
+                                      }
+                                      const newDetails = [...paymentDetails];
+                                      newDetails[index].amount = value;
+                                      setPaymentDetails(newDetails);
+                                    }}
+                                    onBlur={(e) => {
+                                      const value = e.target.value;
+                                      if (value && !isNaN(parseFloat(value))) {
+                                        const newDetails = [...paymentDetails];
+                                        newDetails[index].amount = parseFloat(value).toFixed(2);
+                                        setPaymentDetails(newDetails);
+                                      }
+                                    }}
+                                    placeholder="0.00"
+                                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: 'white', fontSize: '14px', outline: 'none', fontWeight: '600' }}
+                                  />
+                                </div>
+                                <div style={{ alignSelf: 'flex-end', paddingBottom: '2px' }}>
+                                  <button
+                                    onClick={() => {
+                                      const newDetails = paymentDetails.filter((_, i) => i !== index);
+                                      setPaymentDetails(newDetails);
+                                    }}
+                                    title="Remover"
+                                    style={{ padding: '10px', borderRadius: '6px', border: 'none', backgroundColor: '#fee2e2', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.2s' }}
+                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fecaca'}
+                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                                  >
+                                    <FiTrash2 size={18} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {paymentDetails.length > 0 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setPaymentDetails([...paymentDetails, { payment_type: 0, amount: '' }])}
+                          style={{ marginBottom: '20px', width: '100%', borderStyle: 'dashed', borderWidth: '2px' }}
+                        >
+                          <FiPlusCircle /> Adicionar Outra Forma de Pagamento
+                        </Button>
+                      )}
+
+                        <div style={{ 
+                          marginTop: '20px', 
+                          padding: '16px', 
+                          backgroundColor: '#f8fafc', 
+                          borderRadius: '10px', 
+                          border: '1px solid #e2e8f0',
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '16px'
+                        }}>
+                          <div style={{ padding: '12px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <span style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '4px', fontWeight: '600' }}>TOTAL PAGO</span>
+                            <span style={{ fontSize: '20px', fontWeight: '800', color: '#059669' }}>
+                              R$ {paymentDetails.reduce((sum, d) => sum + parseFloat(d.amount || '0'), 0).toFixed(2).replace('.', ',')}
+                            </span>
+                          </div>
+                          
+                          <div style={{ 
+                            padding: '12px', 
+                            backgroundColor: 'white', 
+                            borderRadius: '8px', 
+                            border: '1px solid #e2e8f0',
+                            borderLeft: `4px solid ${Math.abs(paymentDetails.reduce((sum, d) => sum + parseFloat(d.amount || '0'), 0) - totalReal) < 0.01 ? '#059669' : '#dc2626'}`
+                          }}>
+                            <span style={{ display: 'block', fontSize: '12px', color: '#64748b', marginBottom: '4px', fontWeight: '600' }}>FALTA PAGAR</span>
+                            <span style={{ 
+                              fontSize: '20px', 
+                              fontWeight: '800', 
+                              color: Math.abs(paymentDetails.reduce((sum, d) => sum + parseFloat(d.amount || '0'), 0) - totalReal) < 0.01 ? '#059669' : '#dc2626'
+                            }}>
+                              R$ {Math.max(0, totalReal - paymentDetails.reduce((sum, d) => sum + parseFloat(d.amount || '0'), 0)).toFixed(2).replace('.', ',')}
+                            </span>
+                          </div>
+                        </div>
+
+                          {Math.abs(paymentDetails.reduce((sum, d) => sum + parseFloat(d.amount || '0'), 0) - totalReal) < 0.01 && paymentDetails.length > 0 && (
+                            <div style={{ marginTop: '12px', padding: '10px', backgroundColor: '#ecfdf5', color: '#059669', borderRadius: '6px', fontSize: '14px', textAlign: 'center', fontWeight: '600', border: '1px solid #a7f3d0' }}>
+                              <FiCheckCircle style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+                              Valor total conferido
+                            </div>
+                          )}
+                        </>
+                      )}
+                      </div>
+                    );
+                  })()}
 
                   <div className="modal-actions">
                     {selectedComanda?.status === 'closed' ? (
@@ -5070,14 +5664,16 @@ const Dashboard: React.FC = () => {
         <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
           backgroundColor: 'white',
           maxWidth: '500px',
-          border: '3px solid #ffc107'
+          borderRadius: '12px',
+          overflow: 'hidden'
         }}>
           <div className="modal-header" style={{ 
-            background: 'linear-gradient(135deg, #ffc107 0%, #ffb300 100%)',
-            color: '#000'
+            background: '#f8fafc',
+            borderBottom: '1px solid #e2e8f0',
+            padding: '16px 24px'
           }}>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FiClock size={24} />
+            <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.25rem', color: '#1e293b', fontWeight: 600 }}>
+              <FiClock size={20} />
               Ajustar Tempo Adicional
             </h2>
             <button 
@@ -5086,49 +5682,47 @@ const Dashboard: React.FC = () => {
                 setShowAdjustTimeModal(false);
                 setAdjustingTimeItem(null);
               }}
-              style={{ color: '#000' }}
+              style={{ color: '#64748b' }}
             >
               <FiX />
             </button>
           </div>
           
-          <div className="modal-body" style={{ padding: '30px 20px' }}>
+          <div className="modal-body" style={{ padding: '24px' }}>
             <div style={{
               padding: '16px',
-              backgroundColor: '#fff3cd',
-              border: '1px solid #ffc107',
+              backgroundColor: '#f1f5f9',
               borderRadius: '8px',
-              marginBottom: '20px'
+              marginBottom: '24px',
+              border: '1px solid #e2e8f0'
             }}>
-              <div style={{ fontSize: '14px', color: '#856404', marginBottom: '8px' }}>
-                <strong>Item:</strong> {adjustingTimeItem.description || adjustingTimeItem.product_name}
+              <div style={{ fontSize: '14px', color: '#475569', marginBottom: '6px' }}>
+                <strong style={{ color: '#1e293b' }}>Item:</strong> {adjustingTimeItem.description || adjustingTimeItem.product_name}
               </div>
-              <div style={{ fontSize: '14px', color: '#856404' }}>
-                <strong>Tempo adicional atual:</strong> {adjustingTimeItem.quantity} minutos
+              <div style={{ fontSize: '14px', color: '#475569' }}>
+                <strong style={{ color: '#1e293b' }}>Tempo adicional atual:</strong> {adjustingTimeItem.quantity} minutos
               </div>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <p style={{ fontSize: '15px', color: '#374151', marginBottom: '15px', lineHeight: '1.6' }}>
-                Digite o <strong>novo tempo adicional</strong> que deve ser cobrado.
+            <div style={{ marginBottom: '24px' }}>
+              <p style={{ fontSize: '14px', color: '#475569', marginBottom: '12px', lineHeight: '1.5' }}>
+                Informe o novo tempo adicional em minutos. O valor será atualizado na comanda para refletir o ajuste manual.
               </p>
-              <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px', lineHeight: '1.5' }}>
-                Por exemplo: Se o tempo esgotou há 15 minutos, mas 5 minutos foram culpa sua (esquecimento, demora no atendimento), 
-                digite <strong>10</strong> para cobrar apenas 10 minutos.
-              </p>
-              <p style={{ fontSize: '14px', color: '#dc2626', fontWeight: 600, marginBottom: '20px' }}>
-                ⚠️ Digite <strong>0</strong> para remover completamente o tempo adicional.
+              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px', padding: '10px', backgroundColor: '#fdf2f2', borderRadius: '6px', borderLeft: '4px solid #ef4444' }}>
+                Nota: Digite 0 para remover completamente a cobrança de tempo adicional deste item.
               </p>
 
               <div>
                 <label style={{ 
                   display: 'block', 
-                  fontSize: '14px', 
+                  fontSize: '13px', 
                   fontWeight: 600, 
-                  color: '#374151',
-                  marginBottom: '8px'
+                  color: '#334155',
+                  marginBottom: '8px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.025em'
                 }}>
-                  Novo tempo adicional (minutos):
+                  Novo Tempo (Minutos)
                 </label>
                 <input
                   type="number"
@@ -5160,34 +5754,39 @@ const Dashboard: React.FC = () => {
                   }}
                   style={{
                     width: '100%',
-                    padding: '12px 16px',
-                    border: '2px solid #ffc107',
+                    padding: '12px',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    textAlign: 'center'
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    textAlign: 'center',
+                    color: '#1e293b',
+                    outline: 'none',
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
                   }}
                   autoFocus
                 />
                 <div style={{ 
-                  marginTop: '8px', 
-                  fontSize: '13px', 
-                  color: '#6b7280',
+                  marginTop: '6px', 
+                  fontSize: '12px', 
+                  color: '#94a3b8',
                   textAlign: 'center'
                 }}>
-                  (entre 0 e {adjustingTimeItem.quantity} minutos)
+                  Limite permitido: 0 a {adjustingTimeItem.quantity} minutos
                 </div>
               </div>
 
-              <div style={{ marginTop: '20px' }}>
+              <div style={{ marginTop: '24px' }}>
                 <label style={{ 
                   display: 'block', 
-                  fontSize: '14px', 
+                  fontSize: '13px', 
                   fontWeight: 600, 
-                  color: '#374151',
-                  marginBottom: '8px'
+                  color: '#334155',
+                  marginBottom: '8px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.025em'
                 }}>
-                  Motivo do ajuste: <span style={{ color: '#dc2626' }}>*</span>
+                  Motivo do Ajuste <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <textarea
                   value={adjustmentReason}
@@ -5205,25 +5804,26 @@ const Dashboard: React.FC = () => {
                       }));
                     }
                   }}
-                  placeholder="Ex: Cliente foi ao banheiro, demora no atendimento, esquecimento do operador..."
+                  placeholder="Descreva o motivo (ex: atraso no atendimento, compensação de tempo...)"
                   style={{
                     width: '100%',
-                    minHeight: '80px',
-                    padding: '12px 16px',
-                    border: '2px solid #d1d5db',
+                    minHeight: '100px',
+                    padding: '12px',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
                     fontSize: '14px',
                     fontFamily: 'inherit',
-                    resize: 'vertical'
+                    resize: 'none',
+                    outline: 'none'
                   }}
                 />
                 <div style={{ 
                   marginTop: '6px', 
                   fontSize: '12px', 
-                  color: '#dc2626',
-                  fontWeight: 500
+                  color: '#64748b',
+                  fontStyle: 'italic'
                 }}>
-                  * Campo obrigatório para fins de auditoria
+                  Este campo é obrigatório para o registro do histórico.
                 </div>
               </div>
             </div>
@@ -5240,29 +5840,33 @@ const Dashboard: React.FC = () => {
               return newQuantity !== adjustingTimeItem.quantity && (
                 <div style={{
                   padding: '16px',
-                  backgroundColor: newQuantity === 0 ? '#fee2e2' : '#dcfce7',
-                  border: `2px solid ${newQuantity === 0 ? '#dc2626' : '#16a34a'}`,
+                  backgroundColor: newQuantity === 0 ? '#fef2f2' : '#f0fdf4',
+                  border: `1px solid ${newQuantity === 0 ? '#fecaca' : '#bbf7d0'}`,
                   borderRadius: '8px',
-                  marginTop: '20px'
+                  marginTop: '12px'
                 }}>
                   <div style={{ 
-                    fontSize: '15px', 
+                    fontSize: '14px', 
                     fontWeight: 600, 
                     color: newQuantity === 0 ? '#dc2626' : '#16a34a',
-                    marginBottom: '8px'
+                    marginBottom: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
                   }}>
-                    {newQuantity === 0 ? '🗑️ Tempo adicional será removido' : '✓ Novo valor a cobrar'}
+                    {newQuantity === 0 ? <FiTrash2 size={16} /> : <FiCheckCircle size={16} />}
+                    {newQuantity === 0 ? 'O tempo adicional será totalmente removido' : 'Novo valor calculado'}
                   </div>
                   {newQuantity > 0 && (
                     <>
-                      <div style={{ fontSize: '14px', color: '#374151' }}>
-                        <strong>{newQuantity} minutos</strong> × R$ {unitPrice.toFixed(2).replace('.', ',')} = 
+                      <div style={{ fontSize: '14px', color: '#475569' }}>
+                        {newQuantity} minutos × R$ {unitPrice.toFixed(2).replace('.', ',')} = 
                         <strong style={{ marginLeft: '8px', fontSize: '16px', color: '#16a34a' }}>
                           R$ {newTotal.toFixed(2).replace('.', ',')}
                         </strong>
                       </div>
-                      <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>
-                        Economia: R$ {(parseFloat(adjustingTimeItem.subtotal) - newTotal).toFixed(2).replace('.', ',')}
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                        Diferença: - R$ {(parseFloat(adjustingTimeItem.subtotal) - newTotal).toFixed(2).replace('.', ',')}
                       </div>
                     </>
                   )}
@@ -5273,10 +5877,11 @@ const Dashboard: React.FC = () => {
           
           <div style={{
             display: 'flex',
-            gap: '10px',
+            gap: '12px',
             justifyContent: 'flex-end',
-            padding: '20px',
-            borderTop: '1px solid #eee'
+            padding: '16px 24px',
+            backgroundColor: '#f8fafc',
+            borderTop: '1px solid #e2e8f0'
           }}>
             <Button
               variant="outline"
@@ -5285,6 +5890,7 @@ const Dashboard: React.FC = () => {
                 setAdjustingTimeItem(null);
                 setAdjustmentReason('');
               }}
+              style={{ padding: '8px 20px' }}
             >
               Cancelar
             </Button>
@@ -5309,13 +5915,14 @@ const Dashboard: React.FC = () => {
                 setAdjustmentReason('');
               }}
               style={{
-                backgroundColor: '#ffc107',
-                borderColor: '#ffc107',
-                color: '#000',
+                backgroundColor: 'var(--primary-color, #001166)',
+                borderColor: 'var(--primary-color, #001166)',
+                color: '#fff',
+                padding: '8px 24px',
                 fontWeight: 600
               }}
             >
-              <FiCheck /> Confirmar Ajuste
+              Confirmar Ajuste
             </Button>
           </div>
         </div>

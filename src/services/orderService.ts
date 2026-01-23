@@ -84,13 +84,13 @@ class OrderService {
   async close(
     orderId: number, 
     companyId?: number, 
-    adjustments?: { [jumpId: number]: number } | { dryRun?: boolean }
+    adjustments?: { [jumpId: number]: number } | { dryRun?: boolean },
+    paymentDetails?: {payment_type: number, amount: string}[]
   ): Promise<ApiResponse<Order> & { cupom_fiscal?: string; preview?: any }> {
     try {
       const params: any = {};
       if (companyId) params.company_id = companyId;
       
-      // Separa dryRun de adjustments
       let isDryRun = false;
       let actualAdjustments = undefined;
       
@@ -104,7 +104,11 @@ class OrderService {
       
       if (isDryRun) params.dry_run = true;
 
-      const body = actualAdjustments ? { additional_time_adjustments: actualAdjustments } : {};
+      const body: any = actualAdjustments ? { additional_time_adjustments: actualAdjustments } : {};
+      if (paymentDetails && paymentDetails.length > 0) {
+        body.payment_details = paymentDetails;
+      }
+      
       const response = await api.post<ApiResponse<Order> & { cupom_fiscal?: string; preview?: any }>(`/orders/${orderId}/close/`, body, { params });
       return response;
     } catch (error: any) {

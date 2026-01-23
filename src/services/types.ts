@@ -76,6 +76,8 @@ export interface Company {
   name: string;
   legal_name: string;
   cnpj: string;
+  inscricao_estadual?: string; // Inscrição Estadual (opcional para unidades)
+  ie_isento?: boolean; // Indica se é isento de IE
   phone: string;
   email: string;
   address: string;
@@ -85,6 +87,9 @@ export interface Company {
   is_active: boolean;
   due_date: number;
   unit_name?: string; // Nome da unidade (opcional)
+  is_matriz: boolean; // Indica se é matriz ou unidade
+  matriz: number | null; // ID da matriz (para unidades)
+  matriz_name?: string; // Nome da matriz (apenas leitura)
   created_at: string;
   updated_at: string;
 }
@@ -212,6 +217,18 @@ export interface Product {
   price: string;
   product_type: number;
   product_type_name: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EquipmentUnit {
+  id: number;
+  product: number;
+  product_name: string;
+  number: string;
+  status: 'available' | 'in_use' | 'maintenance';
+  status_display: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;

@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Login, TVMode } from './pages/external';
-import { SelectCompany, Dashboard, Config, Customers, Products, FinancialReports, UsersManagement, SuperuserMode, AdminPanel } from './pages/internal';
+import { SelectCompany, Dashboard, Config, Customers, Products, FinancialReports, UsersManagement, SuperuserMode, AdminPanel, FiscalCertificate } from './pages/internal';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css'
@@ -126,6 +126,14 @@ function App() {
           element={
             <AdminRoute>
               <FinancialReports />
+            </AdminRoute>
+          } 
+        />
+        <Route 
+          path="/fiscal-certificate" 
+          element={
+            <AdminRoute>
+              <FiscalCertificate />
             </AdminRoute>
           } 
         />

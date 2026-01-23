@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FiGrid, FiUsers, FiPackage, FiSettings, FiLogOut, FiRepeat, FiBarChart2, FiBriefcase } from 'react-icons/fi';
+import { FiGrid, FiUsers, FiPackage, FiSettings, FiLogOut, FiRepeat, FiBarChart2, FiBriefcase, FiFileText } from 'react-icons/fi';
 import { companyService } from '../../../services';
 import { formatCompanyName } from '../../../utils/companyUtils';
 import './Sidebar.css';
@@ -105,6 +105,7 @@ const Sidebar: React.FC = () => {
     { path: '/users-management', name: 'Gerenciar Usuários', icon: FiUsers, adminOnly: true },
     { path: '/products', name: 'Produtos', icon: FiPackage, adminOnly: true },
     { path: '/reports', name: 'Relatórios', icon: FiBarChart2, adminOnly: true },
+    { path: '/fiscal-certificate', name: 'Fiscal / NFC-e', icon: FiFileText, adminOnly: true },
     { path: '/config', name: 'Configurações', icon: FiSettings, adminOnly: true },
   ];
 

@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { useNavigate, NavLink, Routes, Route, Navigate } from 'react-router-dom';
-import { FiBriefcase, FiUsers, FiLogOut, FiArrowLeft } from 'react-icons/fi';
+import { FiBriefcase, FiUsers, FiLogOut, FiArrowLeft, FiFileText } from 'react-icons/fi';
 import { Companies } from '../companies';
 import { AdminUsers } from '../adminUsers';
+import { Fiscal } from '../fiscal';
 import './AdminPanel.css';
 
 const AdminPanel: React.FC = () => {
@@ -64,6 +65,15 @@ const AdminPanel: React.FC = () => {
                 <span>Usuários Admin</span>
               </NavLink>
             </li>
+            <li>
+              <NavLink 
+                to="/admin-panel/fiscal" 
+                className={({ isActive }) => `admin-panel-link${isActive ? ' active' : ''}`}
+              >
+                <FiFileText size={20} />
+                <span>Fiscal</span>
+              </NavLink>
+            </li>
           </ul>
         </nav>
 
@@ -96,6 +106,7 @@ const AdminPanel: React.FC = () => {
           <Route path="/" element={<Navigate to="/admin-panel/companies" replace />} />
           <Route path="/companies" element={<Companies hideLayout />} />
           <Route path="/admin-users" element={<AdminUsers />} />
+          <Route path="/fiscal" element={<Fiscal />} />
         </Routes>
       </main>
     </div>

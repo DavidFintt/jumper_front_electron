@@ -16,6 +16,7 @@ export { default as cashRegisterService } from './cashRegisterService';
 export { default as financialReportsService } from './financialReportsService';
 export { fiscalService } from './fiscalService';
 export { equipmentUnitService } from './equipmentUnitService';
+export { activationService } from './activationService';
 
 // Types
 export * from './types';

@@ -344,15 +344,19 @@
 }
 
 .jump-card-content {
-  padding: 20px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 4px;
+}
+
+.jump-card-header {
+  padding: 14px 14px 0 14px;
 }
 
 .jump-card-header .customer-name {
   color: var(--secondary-color, #111827);
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 700;
   margin: 0;
   line-height: 1.2;
@@ -361,34 +365,44 @@
 .jump-card-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0;
+  padding: 0;
 }
 
 .info-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  font-size: 11px !important;
+  margin-bottom: 0 !important;
 }
 
 .info-icon {
-  color: var(--primary-color);
-  font-size: 16px;
+  color: var(--primary-color) !important;
+  font-size: 12px !important;
+  flex-shrink: 0 !important;
 }
 
 .info-label {
-  color: var(--secondary-color, #6b7280);
-  flex: 1;
+  color: var(--secondary-color, #6b7280) !important;
+  white-space: nowrap !important;
+  font-size: 11px !important;
 }
 
 .info-value {
-  color: var(--secondary-color, #111827);
-  font-weight: 600;
+  color: var(--secondary-color, #111827) !important;
+  font-weight: 600 !important;
+  margin-left: auto !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+  font-size: 11px !important;
 }
 
 .jump-card-footer {
   margin-top: auto;
-  padding-top: 16px;
+  padding: 16px 14px 14px 14px;
   border-top: 1px solid var(--background-color);
 }
 
@@ -408,7 +422,7 @@
 }
 
 .timer-label {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--secondary-color, #6b7280);
   font-weight: 500;
   text-transform: uppercase;
@@ -416,7 +430,7 @@
 }
 
 .timer-value {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--secondary-color, #111827);
   font-family: 'Roboto Mono', monospace;

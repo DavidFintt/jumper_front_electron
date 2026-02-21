@@ -70,8 +70,8 @@ function Login() {
           // Se venceu, bloquear acesso
           if (company.is_expired) {
             toast.error(company.message || 'Assinatura vencida! Entre em contato com o suporte.', {
-              autoClose: false,
-              closeOnClick: false,
+              autoClose: 10000,
+              closeOnClick: true,
             });
             return { canAccess: false, message: company.message };
           }
@@ -158,7 +158,7 @@ function Login() {
     <div className="login-container">
       <Card variant="elevated" padding="large" className="login-box">
         <div className="login-header">
-          <img src="/logo.png" alt="Jump System" className="login-logo" />
+          <img src="./logo.png" alt="Jump System" className="login-logo" />
           <p>Faça login para continuar</p>
         </div>
 

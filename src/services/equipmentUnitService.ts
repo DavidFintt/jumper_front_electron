@@ -11,7 +11,7 @@ export interface ApiResponse<T> {
 }
 
 export const equipmentUnitService = {
-  async list(productId: number, status?: string): Promise<ApiResponse<EquipmentUnit[]>> {
+  async list(productId: string, status?: string): Promise<ApiResponse<EquipmentUnit[]>> {
     try {
       let url = `/equipment-units/?product_id=${productId}`;
       if (status) {
@@ -28,14 +28,14 @@ export const equipmentUnitService = {
   },
 
   async create(data: {
-    product: number;
+    product: string;
     number: string;
     status?: string;
     is_active?: boolean;
   }): Promise<ApiResponse<EquipmentUnit>> {
     try {
       const response = await api.post('/equipment-units/', data);
-      return response.data;
+      return response;
     } catch (error: any) {
       return {
         success: false,
@@ -45,10 +45,10 @@ export const equipmentUnitService = {
     }
   },
 
-  async get(unitId: number): Promise<ApiResponse<EquipmentUnit>> {
+  async get(unitId: string): Promise<ApiResponse<EquipmentUnit>> {
     try {
       const response = await api.get(`/equipment-units/${unitId}/`);
-      return response.data;
+      return response;
     } catch (error: any) {
       return {
         success: false,
@@ -58,7 +58,7 @@ export const equipmentUnitService = {
   },
 
   async update(
-    unitId: number,
+    unitId: string,
     data: {
       number?: string;
       status?: string;
@@ -67,7 +67,7 @@ export const equipmentUnitService = {
   ): Promise<ApiResponse<EquipmentUnit>> {
     try {
       const response = await api.patch(`/equipment-units/${unitId}/`, data);
-      return response.data;
+      return response;
     } catch (error: any) {
       return {
         success: false,
@@ -77,10 +77,10 @@ export const equipmentUnitService = {
     }
   },
 
-  async delete(unitId: number): Promise<ApiResponse<void>> {
+  async delete(unitId: string): Promise<ApiResponse<void>> {
     try {
       const response = await api.delete(`/equipment-units/${unitId}/`);
-      return response.data;
+      return response;
     } catch (error: any) {
       return {
         success: false,

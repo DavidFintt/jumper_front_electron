@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Layout } from '../../../components/layout';
 import { Button, Alert, Input } from '../../../components/ui';
 import { fiscalService } from '../../../services';
+import { api } from '../../../services/api';
 import { toast } from 'react-toastify';
-import { FiFileText, FiKey } from 'react-icons/fi';
+import { FiFileText, FiKey, FiShield, FiAlertTriangle } from 'react-icons/fi';
 import './FiscalCertificate.css';
 
 interface FiscalEstablishment {
@@ -16,6 +17,20 @@ interface FiscalEstablishment {
   environment?: string;
   environment_display?: string;
   has_active_certificate?: boolean;
+}
+
+interface CertificateStatus {
+  installed: boolean;
+  valid?: boolean;
+  expired?: boolean;
+  valid_from?: string;
+  valid_to?: string;
+  days_remaining?: number;
+  common_name?: string;
+  subject?: string;
+  issuer?: string;
+  path?: string;
+  reason?: string;
 }
 
 interface Company {
@@ -37,16 +52,13 @@ export const FiscalCertificate: React.FC = () => {
   const [establishment, setEstablishment] = useState<FiscalEstablishment | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+  const [certStatus, setCertStatus] = useState<CertificateStatus | null>(null);
+
   const [cscToken, setCscToken] = useState('');
   const [cscId, setCscId] = useState('');
   const [crt, setCrt] = useState('');
   const [environment, setEnvironment] = useState('HOMOLOG');
-  
-  const [certificateFile, setCertificateFile] = useState<File | null>(null);
-  const [certificatePassword, setCertificatePassword] = useState('');
-  const [certificateFileError, setCertificateFileError] = useState<string | null>(null);
-  
+
   const [matrizData, setMatrizData] = useState<Company | null>(null);
   const [isUnidade, setIsUnidade] = useState(false);
 
@@ -55,53 +67,18 @@ export const FiscalCertificate: React.FC = () => {
 
   useEffect(() => {
     loadEstablishment();
+    loadCertificateStatus();
   }, []);
 
-  const handleCertificateFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    setCertificateFileError(null);
-    
-    if (!file) {
-      setCertificateFile(null);
-      return;
+  const loadCertificateStatus = async () => {
+    try {
+      const response = await api.get('/fiscal/certificate-status/');
+      if (response.success) {
+        setCertStatus(response.data);
+      }
+    } catch {
+      setCertStatus(null);
     }
-    
-    // Validar extensão do arquivo
-    const fileName = file.name.toLowerCase();
-    const validExtensions = ['.pfx', '.p12'];
-    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
-    
-    if (!hasValidExtension) {
-      setCertificateFileError(
-        'Formato de arquivo inválido. Por favor, selecione um certificado digital no formato .pfx ou .p12'
-      );
-      setCertificateFile(null);
-      e.target.value = ''; // Limpa o input
-      toast.error('Formato de arquivo inválido. Selecione um arquivo .pfx ou .p12');
-      return;
-    }
-    
-    // Validar tamanho (certificados geralmente têm entre 1KB e 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const minSize = 100; // 100 bytes
-    
-    if (file.size > maxSize) {
-      setCertificateFileError('O arquivo é muito grande. Certificados digitais geralmente têm menos de 10MB.');
-      setCertificateFile(null);
-      e.target.value = '';
-      toast.error('Arquivo muito grande');
-      return;
-    }
-    
-    if (file.size < minSize) {
-      setCertificateFileError('O arquivo é muito pequeno para ser um certificado válido.');
-      setCertificateFile(null);
-      e.target.value = '';
-      toast.error('Arquivo muito pequeno');
-      return;
-    }
-    
-    setCertificateFile(file);
   };
 
   const loadEstablishment = async () => {
@@ -131,19 +108,17 @@ export const FiscalCertificate: React.FC = () => {
       }
       
       const response = await fiscalService.listEstablishments();
-      
+
       if (response.success && response.data) {
-        // Limpar CNPJ da empresa para comparação (remove formatação)
         const companyCnpjClean = company.cnpj.replace(/[.\-/]/g, '');
-        
+
         const companyEstablishment = response.data.find(
           (est: FiscalEstablishment) => {
-            // Limpar CNPJ do establishment também para garantir
             const estCnpjClean = est.cnpj.replace(/[.\-/]/g, '');
             return estCnpjClean === companyCnpjClean;
           }
         );
-        
+
         if (companyEstablishment) {
           setEstablishment(companyEstablishment);
           setCscToken(companyEstablishment.nfce_csc_token || '');
@@ -162,73 +137,9 @@ export const FiscalCertificate: React.FC = () => {
     }
   };
 
-  const uploadCertificate = async (): Promise<boolean> => {
-    if (!certificateFile || !certificatePassword) {
-      return true; // Não há certificado para enviar, continuar
-    }
-
-    if (!establishment) {
-      toast.error('Estabelecimento fiscal não encontrado');
-      return false;
-    }
-
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const base64 = e.target?.result as string;
-          const base64Data = base64.split(',')[1];
-
-          const response = await fiscalService.uploadCertificate({
-            establishment: establishment.id,
-            pfx_base64: base64Data,
-            pfx_password: certificatePassword,
-          });
-
-          if (response.success) {
-            setCertificateFile(null);
-            setCertificatePassword('');
-            resolve(true);
-          } else {
-            // Tentar extrair mensagem mais específica dos detalhes
-            let errorMessage = 'Erro ao enviar certificado';
-            
-            if (response.details) {
-              if (response.details.pfx_base64) {
-                errorMessage = Array.isArray(response.details.pfx_base64) 
-                  ? response.details.pfx_base64[0] 
-                  : response.details.pfx_base64;
-              } else if (response.details.pfx_password) {
-                errorMessage = Array.isArray(response.details.pfx_password) 
-                  ? response.details.pfx_password[0] 
-                  : response.details.pfx_password;
-              }
-            } else if (response.error) {
-              errorMessage = response.error;
-            }
-            
-            toast.error(errorMessage);
-            resolve(false);
-          }
-        } catch (error) {
-          console.error('Erro ao enviar certificado:', error);
-          toast.error('Erro ao enviar certificado');
-          resolve(false);
-        }
-      };
-
-      reader.onerror = () => {
-        toast.error('Erro ao ler o arquivo');
-        resolve(false);
-      };
-
-      reader.readAsDataURL(certificateFile);
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!establishment) {
       toast.error('Estabelecimento fiscal não encontrado');
       return;
@@ -236,43 +147,15 @@ export const FiscalCertificate: React.FC = () => {
 
     try {
       setSaving(true);
-      
-      // 1. Primeiro fazer upload do certificado se houver
-      if (certificateFile || certificatePassword) {
-        if (!certificateFile || !certificatePassword) {
-          toast.error('Para enviar o certificado, é necessário selecionar o arquivo e informar a senha');
-          setSaving(false);
-          return;
-        }
-        
-        const certUploaded = await uploadCertificate();
-        if (!certUploaded) {
-          setSaving(false);
-          return;
-        }
-      }
-      
-      // 2. Atualizar dados fiscais (CSC, CRT, ambiente)
+
       const data: any = {};
-      
-      if (cscToken) {
-        data.nfce_csc_token = cscToken;
-      }
-      
-      if (cscId) {
-        data.nfce_csc_id = cscId;
-      }
-
-      if (crt) {
-        data.crt = crt;
-      }
-
-      if (environment) {
-        data.environment = environment;
-      }
+      if (cscToken) data.nfce_csc_token = cscToken;
+      if (cscId) data.nfce_csc_id = cscId;
+      if (crt) data.crt = crt;
+      if (environment) data.environment = environment;
 
       const response = await fiscalService.updateEstablishment(establishment.id, data);
-      
+
       if (response.success) {
         toast.success('Configurações fiscais salvas com sucesso!');
         loadEstablishment();
@@ -280,7 +163,6 @@ export const FiscalCertificate: React.FC = () => {
         toast.error(response.error || 'Erro ao atualizar dados fiscais');
       }
     } catch (error) {
-      console.error('Erro ao salvar:', error);
       toast.error('Erro ao salvar dados fiscais');
     } finally {
       setSaving(false);
@@ -375,88 +257,71 @@ export const FiscalCertificate: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="fiscal-certificate-form">
-          {/* Seção de Certificado Digital */}
           <div className="form-section">
             <h3><FiKey /> Certificado Digital (PFX/A1)</h3>
             <p className="form-section-description">
-              O certificado digital é essencial para assinar digitalmente suas notas fiscais com validade jurídica.
+              O certificado digital deve ser instalado diretamente no servidor local. Configure o caminho no arquivo .env do backend.
             </p>
-            
-            {establishment?.has_active_certificate && (
-              <div className="certificate-alert">
-                <span>Certificado ativo e válido configurado no sistema.</span>
+
+            {certStatus?.installed ? (
+              <div style={{
+                padding: '16px 20px',
+                borderRadius: '8px',
+                backgroundColor: certStatus.expired ? '#fef2f2' : '#f0fdf4',
+                border: `1px solid ${certStatus.expired ? '#fecaca' : '#bbf7d0'}`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {certStatus.expired ? (
+                    <FiAlertTriangle size={20} style={{ color: '#dc2626' }} />
+                  ) : (
+                    <FiShield size={20} style={{ color: '#16a34a' }} />
+                  )}
+                  <strong style={{ color: certStatus.expired ? '#dc2626' : '#16a34a', fontSize: '15px' }}>
+                    {certStatus.expired ? 'Certificado expirado' : 'Certificado instalado e válido'}
+                  </strong>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '14px', color: '#475569' }}>
+                  {certStatus.common_name && (
+                    <div><strong>Titular:</strong> {certStatus.common_name}</div>
+                  )}
+                  {certStatus.valid_from && (
+                    <div><strong>Válido de:</strong> {new Date(certStatus.valid_from).toLocaleDateString('pt-BR')}</div>
+                  )}
+                  {certStatus.valid_to && (
+                    <div><strong>Válido até:</strong> {new Date(certStatus.valid_to).toLocaleDateString('pt-BR')}</div>
+                  )}
+                  {certStatus.days_remaining !== undefined && !certStatus.expired && (
+                    <div>
+                      <strong>Dias restantes:</strong>{' '}
+                      <span style={{ color: certStatus.days_remaining < 30 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                        {certStatus.days_remaining}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                padding: '16px 20px',
+                borderRadius: '8px',
+                backgroundColor: '#fffbeb',
+                border: '1px solid #fde68a',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FiAlertTriangle size={20} style={{ color: '#d97706' }} />
+                  <strong style={{ color: '#92400e', fontSize: '15px' }}>Certificado não instalado</strong>
+                </div>
+                <p style={{ color: '#92400e', fontSize: '14px', margin: 0 }}>
+                  {certStatus?.reason || 'Configure CERT_PFX_PATH e CERT_PFX_PASSWORD no arquivo .env do backend local e reinicie o servidor.'}
+                </p>
               </div>
             )}
-            
-            <div className="form-row">
-              <div className="form-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  Arquivo do Certificado (.pfx)
-                  <i 
-                    className="info-circle"
-                    title="Certificado digital A1 no formato PFX ou P12, emitido por uma Autoridade Certificadora credenciada (ex: Serasa, Certisign). É obrigatório para assinar digitalmente suas notas fiscais."
-                    style={{ 
-                      cursor: 'help',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '16px',
-                      height: '16px',
-                      borderRadius: '50%',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      fontSize: '11px',
-                      fontWeight: 'bold'
-                    }}
-                  >i</i>
-                </label>
-                <input
-                  type="file"
-                  accept=".pfx,.p12"
-                  onChange={handleCertificateFileChange}
-                  className="select-input"
-                />
-                {certificateFileError && (
-                  <small style={{ color: '#ef4444', marginTop: '4px', display: 'block' }}>
-                    {certificateFileError}
-                  </small>
-                )}
-                {certificateFile && !certificateFileError && (
-                  <small style={{ color: '#10b981', marginTop: '4px', display: 'block' }}>
-                    Arquivo selecionado: {certificateFile.name}
-                  </small>
-                )}
-              </div>
-              
-              <div className="form-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  Senha do Certificado
-                  <i 
-                    className="info-circle"
-                    title="Senha definida no momento da compra/emissão do certificado digital. É necessária para descriptografar e utilizar o certificado."
-                    style={{ 
-                      cursor: 'help',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '16px',
-                      height: '16px',
-                      borderRadius: '50%',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      fontSize: '11px',
-                      fontWeight: 'bold'
-                    }}
-                  >i</i>
-                </label>
-                <Input
-                  type="password"
-                  value={certificatePassword}
-                  onChange={(e) => setCertificatePassword(e.target.value)}
-                  placeholder="Senha do arquivo"
-                />
-              </div>
-            </div>
           </div>
 
           {/* Seção de Configurações Fiscais */}

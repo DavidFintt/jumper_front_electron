@@ -14,13 +14,13 @@ import { api } from '../../../services/api';
 import type { Product, Order, CashRegister, OrderItem, JumpUsage, User, EquipmentUnit } from '../../../services/types';
 
 interface CustomerOption {
-  id: number;
+  id: string;
   nome: string;
   cpf?: string;
-  pcd?: boolean; // Pessoa com Deficiência
+  pcd?: boolean;
   tipo: 'Cliente' | 'Dependente';
-  customerId?: number; // ID do responsável se for dependente
-  dependenteId?: number; // ID do dependente se for dependente
+  customerId?: string;
+  dependenteId?: string;
   aprovacao_responsavel?: boolean;
 }
 
@@ -74,6 +74,8 @@ const Dashboard: React.FC = () => {
       return `${wholeHours}h ${minutes}min`;
     }
   };
+
+
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showJumpModal, setShowJumpModal] = useState(false);
   const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>([]);
@@ -89,7 +91,7 @@ const Dashboard: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [newlyCreatedCustomerId, setNewlyCreatedCustomerId] = useState<number | null>(null);
+  const [newlyCreatedCustomerId, setNewlyCreatedCustomerId] = useState<string | null>(null);
   
   // Estados para múltiplos clientes no mesmo jump
   interface SelectedCustomerWithProduct {
@@ -97,7 +99,7 @@ const Dashboard: React.FC = () => {
     product: Product | null;
   }
   const [selectedCustomers, setSelectedCustomers] = useState<SelectedCustomerWithProduct[]>([]);
-  const [expandedCustomers, setExpandedCustomers] = useState<number[]>([]); // IDs dos clientes expandidos
+  const [expandedCustomers, setExpandedCustomers] = useState<string[]>([]);
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [selectedJump, setSelectedJump] = useState<JumpUsage | null>(null);
   const [additionalHours, setAdditionalHours] = useState<number>(0);
@@ -149,13 +151,13 @@ const Dashboard: React.FC = () => {
   const [comandaItems, setComandaItems] = useState<OrderItem[]>([] as any);
   const [comandaTotal, setComandaTotal] = useState<string>('0');
   const [comandaLoading, setComandaLoading] = useState<boolean>(false);
-  const [additionalTimeAdjustments, setAdditionalTimeAdjustments] = useState<{[jumpId: number]: {newQuantity: number, reason: string}}>({});
+  const [additionalTimeAdjustments, setAdditionalTimeAdjustments] = useState<{[jumpId: string]: {newQuantity: number, reason: string}}>({});
   const [showAdjustTimeModal, setShowAdjustTimeModal] = useState(false);
   const [adjustingTimeItem, setAdjustingTimeItem] = useState<any>(null);
   const [adjustmentReason, setAdjustmentReason] = useState<string>('');
   
   const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
-  const [paymentDetails, setPaymentDetails] = useState<{payment_type: number, amount: string}[]>([]);
+  const [paymentDetails, setPaymentDetails] = useState<{payment_type: string, amount: string}[]>([]);
   const [paymentSectionExpanded, setPaymentSectionExpanded] = useState(false);
   const [summarySectionExpanded, setSummarySectionExpanded] = useState(true);
   
@@ -170,7 +172,7 @@ const Dashboard: React.FC = () => {
   const [showConfirmAddTime, setShowConfirmAddTime] = useState(false);
   const [pendingTimeProduct, setPendingTimeProduct] = useState<Product | null>(null);
   const [showConfirmFinishJump, setShowConfirmFinishJump] = useState(false);
-  const [quickCustomerDependentesProducts, setQuickCustomerDependentesProducts] = useState<{[key: number]: Product | null}>({});
+  const [quickCustomerDependentesProducts, setQuickCustomerDependentesProducts] = useState<{[key: string]: Product | null}>({});
   const [quickCustomerData, setQuickCustomerData] = useState({
     nome: '',
     telefone: '',
@@ -185,8 +187,8 @@ const Dashboard: React.FC = () => {
   // Estados para alerta de jump expirado
   const [expiredJumpAlert, setExpiredJumpAlert] = useState<JumpUsage | null>(null);
   const [showExpiredJumpAlert, setShowExpiredJumpAlert] = useState(false);
-  const [notifiedExpiredJumps, setNotifiedExpiredJumps] = useState<Set<number>>(new Set());
-  const [recentlyUpdatedJumps, setRecentlyUpdatedJumps] = useState<Map<number, number>>(new Map()); // jumpId -> timestamp
+  const [notifiedExpiredJumps, setNotifiedExpiredJumps] = useState<Set<string>>(new Set());
+  const [recentlyUpdatedJumps, setRecentlyUpdatedJumps] = useState<Map<string, number>>(new Map());
 
   const userData = JSON.parse(localStorage.getItem('userData') || '{}');
   const selectedCompany = localStorage.getItem('selectedCompany');
@@ -739,12 +741,14 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const loadAvailableUnits = async (productId: number) => {
+  const loadAvailableUnits = async (productId: string) => {
     try {
       setLoadingUnits(true);
       const response = await equipmentUnitService.list(productId, 'available');
+      console.log('🔍 Unidades disponíveis para produto', productId, ':', response);
       if (response.success) {
         const units = (response.data || []).filter(u => u.is_active);
+        console.log('✅ Unidades filtradas (is_active):', units);
         setAvailableUnits(units);
         if (units.length === 0) {
           toast.warning('Nenhuma unidade disponível para este equipamento');
@@ -773,7 +777,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const loadOrder = async (jumpUsageId: number) => {
+  const loadOrder = async (jumpUsageId: string) => {
     try {
       const response = await orderService.getByJumpUsage(jumpUsageId, companyId);
       if (response.success && response.data) {
@@ -791,7 +795,7 @@ const Dashboard: React.FC = () => {
     setOpeningNotes('');
   };
 
-  const loadCashWithdrawals = async (cashRegisterId: number) => {
+  const loadCashWithdrawals = async (cashRegisterId: string) => {
     try {
       // Buscar sangrias do caixa através do backend
       const response = await fetch(`http://localhost:8000/api/cash-register/${cashRegisterId}/withdrawals/`, {
@@ -1112,30 +1116,43 @@ const Dashboard: React.FC = () => {
   };
 
   const handleQuickCustomerSubmit = async (andStartJump: boolean = false) => {
+    console.log('=== handleQuickCustomerSubmit CHAMADO ===');
+    console.log('andStartJump:', andStartJump);
+    console.log('quickCustomerData:', quickCustomerData);
+    console.log('quickCustomerWillUseTitular:', quickCustomerWillUseTitular);
+    console.log('quickCustomerTitularProduct:', quickCustomerTitularProduct);
+    console.log('quickCustomerWillUseDependentes:', quickCustomerWillUseDependentes);
+    console.log('quickCustomerDependentesProducts:', quickCustomerDependentesProducts);
+    
     try {
       setError(null);
 
       // Validações
       if (!quickCustomerData.nome.trim()) {
+        console.log('ERRO: Nome é obrigatório');
         setError('Nome é obrigatório');
         return;
       }
 
       if (!quickCustomerData.telefone.trim()) {
+        console.log('ERRO: Telefone é obrigatório');
         setError('Telefone é obrigatório');
         return;
       }
 
       // Validações para iniciar Jump
       if (andStartJump) {
+        console.log('Validando para iniciar Jump...');
         // Valida se pelo menos uma pessoa foi selecionada
         if (!quickCustomerWillUseTitular && quickCustomerWillUseDependentes.length === 0) {
+          console.log('ERRO: Nenhuma pessoa selecionada');
           setError('Selecione pelo menos uma pessoa para usar o Jump');
           return;
         }
 
         // Valida se o titular tem produto selecionado
         if (quickCustomerWillUseTitular && !quickCustomerTitularProduct) {
+          console.log('ERRO: Titular selecionado mas sem produto');
           setError('Selecione um pacote para o cliente titular');
           return;
         }
@@ -1144,10 +1161,12 @@ const Dashboard: React.FC = () => {
         for (const depIndex of quickCustomerWillUseDependentes) {
           if (!quickCustomerDependentesProducts[depIndex]) {
             const depName = quickCustomerDependentes[depIndex]?.nome || `Dependente ${depIndex + 1}`;
+            console.log(`ERRO: Dependente ${depName} sem produto`);
             setError(`Selecione um pacote para ${depName}`);
             return;
           }
         }
+        console.log('Validações OK! Prosseguindo...');
       }
 
       const data = {
@@ -1168,8 +1187,8 @@ const Dashboard: React.FC = () => {
       const newCustomerId = response.data.id;
       
       // Cadastrar dependentes e coletar IDs de menores de idade
-      const menoresDeIdadeIds: number[] = [];
-      const dependentesCreated: Array<{ id: number; nome: string; index: number }> = [];
+      const menoresDeIdadeIds: (string | number)[] = [];
+      const dependentesCreated: Array<{ id: string | number; nome: string; index: number }> = [];
       
       for (let index = 0; index < quickCustomerDependentes.length; index++) {
         const dep = quickCustomerDependentes[index];
@@ -1190,7 +1209,7 @@ const Dashboard: React.FC = () => {
           
           // Armazena os dados do dependente criado
           dependentesCreated.push({
-            id: dependenteData.id,
+            id: String(dependenteData.id),
             nome: dependenteData.nome,
             index: index
           });
@@ -1211,7 +1230,7 @@ const Dashboard: React.FC = () => {
           const idadeParaVerificar = dependenteData.idade !== undefined ? dependenteData.idade : idade;
           
           if (idadeParaVerificar < 18) {
-            menoresDeIdadeIds.push(dependenteData.id);
+            menoresDeIdadeIds.push(String(dependenteData.id));
           }
         }
       }
@@ -1242,11 +1261,16 @@ const Dashboard: React.FC = () => {
 
       // Se for para iniciar o Jump, prepara e abre o modal
       if (andStartJump) {
+        console.log('=== INICIANDO JUMP ===');
+        console.log('response.data:', response.data);
+        console.log('dependentesCreated:', dependentesCreated);
+        
         // Prepara a lista de clientes para adicionar (só os selecionados)
         const clientsToAdd: SelectedCustomerWithProduct[] = [];
         
         // Adiciona o titular se foi selecionado
         if (quickCustomerWillUseTitular && quickCustomerTitularProduct) {
+          console.log('Adicionando titular à lista:', quickCustomerTitularProduct);
           clientsToAdd.push({
             customer: {
               id: response.data!.id,
@@ -1266,15 +1290,16 @@ const Dashboard: React.FC = () => {
           // Verifica se este dependente está na lista de selecionados
           if (quickCustomerWillUseDependentes.includes(depCreated.index)) {
             const depProduct = quickCustomerDependentesProducts[depCreated.index];
+            console.log(`Dependente ${depCreated.nome} (index ${depCreated.index}):`, depProduct);
             if (depProduct) {
               clientsToAdd.push({
                 customer: {
-                  id: depCreated.id,
+                  id: String(depCreated.id),
                   nome: depCreated.nome,
                   cpf: '',
                   tipo: 'Dependente',
-                  customerId: response.data!.id,
-                  dependenteId: depCreated.id,
+                  customerId: String(response.data!.id),
+                  dependenteId: String(depCreated.id),
                 },
                 product: depProduct,
               });
@@ -1282,14 +1307,18 @@ const Dashboard: React.FC = () => {
           }
         }
         
+        console.log('clientsToAdd final:', clientsToAdd);
+        
         // Adiciona todos à lista de clientes selecionados
         setSelectedCustomers(clientsToAdd);
         
         // Marca como recém-criado para destacar no modal
         setNewlyCreatedCustomerId(response.data!.id);
         
+        console.log('Abrindo modal de Jump em 300ms...');
         // Abre o modal de Jump
         setTimeout(() => {
+          console.log('Chamando handleOpenJumpModal()');
           handleOpenJumpModal();
         }, 300);
       }
@@ -1409,7 +1438,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const imprimirTermo = async (menoresDeIdadeIds: number[]) => {
+  const imprimirTermo = async (menoresDeIdadeIds: (string | number)[]) => {
     try {
       const baseUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}`;
       const token = localStorage.getItem('accessToken');
@@ -1891,12 +1920,15 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       setError(null);
       
+      const unitPrice = parseFloat(selectedConsumable.price);
+      const subtotal = unitPrice * consumableQuantity;
+      
       const response = await orderService.addItem({
         order: currentOrder.id,
         product: selectedConsumable.id,
         item_type: 'consumable',
         quantity: consumableQuantity,
-        unit_price: selectedConsumable.price
+        unit_price: selectedConsumable.price,
       });
 
       if (response.success) {
@@ -1935,21 +1967,30 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       setError(null);
       
+      const unitPrice = parseFloat(selectedEquipment.price);
+      const subtotal = unitPrice * 1; // Equipamento sempre quantidade 1
+      
       // Adiciona o item à comanda
       const response = await orderService.addItem({
         order: currentOrder.id,
         product: selectedEquipment.id,
-        item_type: 'consumable', // Equipamentos usam o mesmo tipo
-        quantity: 1, // Equipamento sempre quantidade 1
+        item_type: 'consumable',
+        quantity: 1,
         unit_price: selectedEquipment.price,
-        description: `${selectedEquipment.name} - Unidade #${selectedUnit.number}`
+        description: `${selectedEquipment.name} - Unidade #${selectedUnit.number}`,
+        equipment_unit: selectedUnit.id
       });
 
       if (response.success) {
         // Marca a unidade como "em uso"
-        await equipmentUnitService.update(selectedUnit.id, {
+        const updateResponse = await equipmentUnitService.update(selectedUnit.id, {
           status: 'in_use'
         });
+        
+        if (!updateResponse.success) {
+          console.error('Erro ao atualizar status da unidade:', updateResponse.error);
+          toast.error('Equipamento adicionado mas não foi possível marcar a unidade como "em uso"');
+        }
 
         toast.success(`Equipamento ${selectedEquipment.name} #${selectedUnit.number} adicionado!`);
         
@@ -1970,7 +2011,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleRemoveOrderItem = async (itemId: number) => {
+  const handleRemoveOrderItem = async (itemId: string) => {
     if (!currentOrder) return;
 
     try {
@@ -1992,7 +2033,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleToggleItemPago = async (itemId: number) => {
+  const handleToggleItemPago = async (itemId: string) => {
     if (!currentOrder) return;
 
     try {
@@ -2079,11 +2120,12 @@ const Dashboard: React.FC = () => {
   };
 
   // Função para expandir/colapsar clientes
-  const toggleCustomerExpansion = (customerId: number) => {
-    setExpandedCustomers(prev => 
-      prev.includes(customerId) 
-        ? prev.filter(id => id !== customerId)
-        : [...prev, customerId]
+  const toggleCustomerExpansion = (customerId: string | number) => {
+    const id = String(customerId);
+    setExpandedCustomers(prev =>
+      prev.includes(id)
+        ? prev.filter(x => x !== id)
+        : [...prev, id]
     );
   };
 
@@ -2122,14 +2164,13 @@ const Dashboard: React.FC = () => {
   };
 
   // Adicionar cliente com todos os seus dependentes
-  const handleAddCustomerWithDependents = (customerId: number) => {
+  const handleAddCustomerWithDependents = (customerId: string | number) => {
     if (!selectedProduct) {
       setError('Selecione um produto (tempo de uso) primeiro');
       return;
     }
 
-    // Encontra o cliente e seus dependentes
-    const customerGroup = customersWithDependents.find(cwd => cwd.customer.id === customerId);
+    const customerGroup = customersWithDependents.find(cwd => String(cwd.customer.id) === String(customerId));
     if (!customerGroup) return;
 
     // Verifica quais já estão na lista
@@ -2925,11 +2966,11 @@ const Dashboard: React.FC = () => {
                       </div>
                       
                       <div className="jump-card-body">
-                        {jump.order && (
+                        {jump.order_number && (
                           <div className="info-row">
                             <FiShoppingCart className="info-icon" />
                             <span className="info-label">Comanda:</span>
-                            <span className="info-value">#{jump.order}</span>
+                            <span className="info-value">#{jump.order_number}</span>
                           </div>
                         )}
                         <div className="info-row">
@@ -3048,7 +3089,7 @@ const Dashboard: React.FC = () => {
                     <div className="jump-card-content">
                       <div className="jump-card-header">
                         <h3 className="customer-name">
-                          Comanda #{order.id}
+                          Comanda #{order.order_number || '---'}
                         </h3>
                       </div>
                       
@@ -3178,7 +3219,7 @@ const Dashboard: React.FC = () => {
                                     className="jump-customer-picker__action-btn expand"
                                     onClick={(e) => { e.stopPropagation(); toggleCustomerExpansion(cwd.customer.id); }}
                                   >
-                                    {expandedCustomers.includes(cwd.customer.id) ? <FiChevronUp /> : <FiChevronDown />}
+                                    {expandedCustomers.includes(String(cwd.customer.id)) ? <FiChevronUp /> : <FiChevronDown />}
                                   </button>
                                 </>
                               )}
@@ -3331,8 +3372,7 @@ const Dashboard: React.FC = () => {
                           <select
                             value={sc.product?.id || ''}
                             onChange={(e) => {
-                              const productId = parseInt(e.target.value);
-                              const product = products.find(p => p.id === productId);
+                              const product = products.find(p => String(p.id) === e.target.value);
                               if (product) {
                                 handleUpdateCustomerProduct(index, product);
                               }
@@ -3525,7 +3565,8 @@ const Dashboard: React.FC = () => {
                           <select
                             value={selectedConsumable?.id || ''}
                             onChange={(e) => {
-                              const product = consumableProducts.find(p => p.id === parseInt(e.target.value));
+                              const productId = e.target.value;
+                              const product = consumableProducts.find(p => String(p.id) === productId);
                               setSelectedConsumable(product || null);
                             }}
                             className="consumable-select"
@@ -3573,7 +3614,8 @@ const Dashboard: React.FC = () => {
                           <select
                             value={selectedEquipment?.id || ''}
                             onChange={(e) => {
-                              const product = equipmentProducts.find(p => p.id === parseInt(e.target.value));
+                              const productId = e.target.value;
+                              const product = equipmentProducts.find(p => String(p.id) === productId);
                               setSelectedEquipment(product || null);
                               setSelectedUnit(null);
                               setAvailableUnits([]);
@@ -3594,7 +3636,8 @@ const Dashboard: React.FC = () => {
                           <select
                             value={selectedUnit?.id || ''}
                             onChange={(e) => {
-                              const unit = availableUnits.find(u => u.id === parseInt(e.target.value));
+                              const unitId = e.target.value;
+                              const unit = availableUnits.find(u => String(u.id) === unitId);
                               setSelectedUnit(unit || null);
                             }}
                             className="consumable-select"
@@ -3656,7 +3699,7 @@ const Dashboard: React.FC = () => {
                     )}
                     <Button
                       type="button"
-                      variant="success"
+                      variant="outline"
                       onClick={handleOpenWhatsApp}
                       disabled={loading}
                       style={{ 
@@ -3983,8 +4026,7 @@ const Dashboard: React.FC = () => {
                       <select
                         value={selectedTransferUser?.id || ''}
                         onChange={(e) => {
-                          const userId = parseInt(e.target.value);
-                          const user = companyUsers.find(u => u.id === userId);
+                          const user = companyUsers.find(u => String(u.id) === e.target.value);
                           setSelectedTransferUser(user || null);
                         }}
                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '16px' }}
@@ -4028,8 +4070,12 @@ const Dashboard: React.FC = () => {
 
         {/* Modal de Cadastro Rápido de Cliente */}
         {showQuickCustomerModal && (
-          <div className="modal-overlay" onClick={handleCloseQuickCustomerModal}>
-            <div className="modal-content customer-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+          <div className="modal-overlay" onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleCloseQuickCustomerModal();
+            }
+          }}>
+            <div className="modal-content customer-modal" style={{ maxWidth: '700px' }}>
               <div className="modal-header">
                 <h2><FiPlus /> Cadastro Rápido de Cliente</h2>
                 <button className="modal-close" onClick={handleCloseQuickCustomerModal}>
@@ -4171,11 +4217,29 @@ const Dashboard: React.FC = () => {
                           <select
                             value={quickCustomerTitularProduct?.id || ''}
                             onChange={(e) => {
-                              const productId = parseInt(e.target.value);
-                              const product = products.find(p => p.id === productId);
+                              console.log('=== SELECT TITULAR onChange ===');
+                              console.log('e.target.value:', e.target.value);
+                              const productId = e.target.value; // UUID string, não número
+                              console.log('productId:', productId);
+                              const product = products.find(p => String(p.id) === productId);
+                              console.log('product found:', product);
                               setQuickCustomerTitularProduct(product || null);
+                              console.log('Estado atualizado para:', product);
                             }}
-                            style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                            onClick={(e) => {
+                              console.log('=== SELECT TITULAR onClick ===');
+                              console.log('Clique no select titular');
+                            }}
+                            style={{ 
+                              flex: 1, 
+                              padding: '8px', 
+                              borderRadius: '4px', 
+                              border: '1px solid #cbd5e1',
+                              cursor: 'pointer',
+                              pointerEvents: 'auto',
+                              position: 'relative',
+                              zIndex: 10
+                            }}
                           >
                             <option value="">Selecione o pacote</option>
                             {products.map(product => (
@@ -4225,14 +4289,34 @@ const Dashboard: React.FC = () => {
                             <select
                               value={quickCustomerDependentesProducts[index]?.id || ''}
                               onChange={(e) => {
-                                const productId = parseInt(e.target.value);
-                                const product = products.find(p => p.id === productId);
+                                console.log('=== SELECT DEPENDENTE onChange ===');
+                                console.log('index:', index);
+                                console.log('e.target.value:', e.target.value);
+                                const productId = e.target.value; // UUID string, não número
+                                console.log('productId:', productId);
+                                const product = products.find(p => String(p.id) === productId);
+                                console.log('product found:', product);
+                                console.log('quickCustomerDependentesProducts antes:', quickCustomerDependentesProducts);
                                 setQuickCustomerDependentesProducts({
                                   ...quickCustomerDependentesProducts,
                                   [index]: product || null
                                 });
+                                console.log('Estado atualizado');
                               }}
-                              style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                              onClick={(e) => {
+                                console.log('=== SELECT DEPENDENTE onClick ===');
+                                console.log('Clique no select dependente index:', index);
+                              }}
+                              style={{ 
+                                flex: 1, 
+                                padding: '8px', 
+                                borderRadius: '4px', 
+                                border: '1px solid #cbd5e1',
+                                cursor: 'pointer',
+                                pointerEvents: 'auto',
+                                position: 'relative',
+                                zIndex: 10
+                              }}
                             >
                               <option value="">Selecione o pacote</option>
                               {products.map(product => (
@@ -4285,7 +4369,7 @@ const Dashboard: React.FC = () => {
               {comandaModalView === 'details' && (
                 <>
                   <div className="modal-header">
-                    <h3><FiShoppingCart /> Comanda #{selectedComanda?.id ?? ''}</h3>
+                    <h3><FiShoppingCart /> Comanda #{selectedComanda ? selectedComanda.order_number || '---' : '---'}</h3>
                     <button className="modal-close" onClick={handleCloseComandaModal} disabled={comandaLoading}>
                       <FiX />
                     </button>
@@ -4350,7 +4434,8 @@ const Dashboard: React.FC = () => {
                             <select
                               value={selectedConsumable?.id || ''}
                               onChange={(e) => {
-                                const product = consumableProducts.find(p => p.id === parseInt(e.target.value));
+                                const productId = e.target.value;
+                                const product = consumableProducts.find(p => String(p.id) === productId);
                                 setSelectedConsumable(product || null);
                               }}
                               className="consumable-select"
@@ -4374,6 +4459,9 @@ const Dashboard: React.FC = () => {
                                 if (!selectedComanda || !selectedConsumable) return;
                                 try {
                                   setComandaLoading(true);
+                                  const unitPrice = parseFloat(selectedConsumable.price);
+                                  const subtotal = unitPrice * consumableQuantity;
+                                  
                                   const response = await orderService.addItem({
                                     order: selectedComanda.id,
                                     product: selectedConsumable.id,
@@ -4431,7 +4519,8 @@ const Dashboard: React.FC = () => {
                             <select
                               value={selectedEquipment?.id || ''}
                               onChange={(e) => {
-                                const product = equipmentProducts.find(p => p.id === parseInt(e.target.value));
+                                const productId = e.target.value;
+                                const product = equipmentProducts.find(p => String(p.id) === productId);
                                 setSelectedEquipment(product || null);
                                 setSelectedUnit(null);
                                 setAvailableUnits([]);
@@ -4452,7 +4541,8 @@ const Dashboard: React.FC = () => {
                             <select
                               value={selectedUnit?.id || ''}
                               onChange={(e) => {
-                                const unit = availableUnits.find(u => u.id === parseInt(e.target.value));
+                                const unitId = e.target.value;
+                                const unit = availableUnits.find(u => String(u.id) === unitId);
                                 setSelectedUnit(unit || null);
                               }}
                               className="consumable-select"
@@ -4476,6 +4566,9 @@ const Dashboard: React.FC = () => {
                                 try {
                                   setComandaLoading(true);
                                   
+                                  const unitPrice = parseFloat(selectedEquipment.price);
+                                  const subtotal = unitPrice * 1; // Equipamento sempre quantidade 1
+                                  
                                   // Adiciona o item à comanda
                                   const response = await orderService.addItem({
                                     order: selectedComanda.id,
@@ -4483,14 +4576,20 @@ const Dashboard: React.FC = () => {
                                     item_type: 'consumable',
                                     quantity: 1,
                                     unit_price: selectedEquipment.price,
-                                    description: `${selectedEquipment.name} - Unidade #${selectedUnit.number}`
+                                    description: `${selectedEquipment.name} - Unidade #${selectedUnit.number}`,
+                                    equipment_unit: selectedUnit.id
                                   });
 
                                   if (response.success && response.data) {
                                     // Marca a unidade como "em uso"
-                                    await equipmentUnitService.update(selectedUnit.id, {
+                                    const updateResponse = await equipmentUnitService.update(selectedUnit.id, {
                                       status: 'in_use'
                                     });
+                                    
+                                    if (!updateResponse.success) {
+                                      console.error('Erro ao atualizar status da unidade:', updateResponse.error);
+                                      toast.error('Equipamento adicionado mas não foi possível marcar a unidade como "em uso"');
+                                    }
                                     
                                     toast.success(`Equipamento ${selectedEquipment.name} #${selectedUnit.number} adicionado!`);
                                     
@@ -4956,9 +5055,9 @@ const Dashboard: React.FC = () => {
                             
                             return consolidatedItems;
                           })().map((item: any) => {
-                            // Extrai Jump ID para itens de tempo adicional
-                            const jumpMatch = item.item_type === 'additional_time' && item.description?.match(/Jump #(\d+)/);
-                            const jumpId = jumpMatch ? parseInt(jumpMatch[1]) : null;
+                            // Extrai Jump ID para itens de tempo adicional (captura número ou UUID)
+                            const jumpMatch = item.item_type === 'additional_time' && item.description?.match(/Jump #([\w-]+)/);
+                            const jumpId = jumpMatch ? jumpMatch[1] : null;
                             const hasAdjustment = jumpId && additionalTimeAdjustments[jumpId] !== undefined;
                             const adjustedQuantity = hasAdjustment ? additionalTimeAdjustments[jumpId].newQuantity : item.quantity;
                             
@@ -5197,7 +5296,7 @@ const Dashboard: React.FC = () => {
                             <Button
                               type="button"
                               variant="primary"
-                              onClick={() => setPaymentDetails([{ payment_type: 0, amount: '' }])}
+                              onClick={() => setPaymentDetails([{ payment_type: '', amount: '' }])}
                               style={{ padding: '10px 20px' }}
                             >
                               Adicionar Primeira Forma de Pagamento
@@ -5213,7 +5312,7 @@ const Dashboard: React.FC = () => {
                                     value={detail.payment_type}
                                     onChange={(e) => {
                                       const newDetails = [...paymentDetails];
-                                      newDetails[index].payment_type = parseInt(e.target.value);
+                                      newDetails[index].payment_type = e.target.value;
                                       setPaymentDetails(newDetails);
                                     }}
                                     style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: 'white', fontSize: '14px', outline: 'none' }}
@@ -5278,7 +5377,7 @@ const Dashboard: React.FC = () => {
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => setPaymentDetails([...paymentDetails, { payment_type: 0, amount: '' }])}
+                          onClick={() => setPaymentDetails([...paymentDetails, { payment_type: '', amount: '' }])}
                           style={{ marginBottom: '20px', width: '100%', borderStyle: 'dashed', borderWidth: '2px' }}
                         >
                           <FiPlusCircle /> Adicionar Outra Forma de Pagamento
@@ -5728,16 +5827,13 @@ const Dashboard: React.FC = () => {
                   type="number"
                   min="0"
                   max={adjustingTimeItem.quantity}
-                  defaultValue={additionalTimeAdjustments[(() => {
+                  defaultValue={(() => {
                     const match = adjustingTimeItem.description?.match(/Jump #(\d+)/);
-                    return match ? parseInt(match[1]) : null;
-                  })()] !== undefined 
-                    ? additionalTimeAdjustments[(() => {
-                        const match = adjustingTimeItem.description?.match(/Jump #(\d+)/);
-                        return match ? parseInt(match[1]) : null;
-                      })()].newQuantity
-                    : adjustingTimeItem.quantity
-                  }
+                    const jumpId = match ? parseInt(match[1]) : null;
+                    return jumpId !== null && additionalTimeAdjustments[jumpId] !== undefined
+                      ? additionalTimeAdjustments[jumpId].newQuantity
+                      : adjustingTimeItem.quantity;
+                  })()}
                   onChange={(e) => {
                     const jumpMatch = adjustingTimeItem.description?.match(/Jump #(\d+)/);
                     const jumpId = jumpMatch ? parseInt(jumpMatch[1]) : null;

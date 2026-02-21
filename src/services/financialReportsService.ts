@@ -13,7 +13,7 @@ export interface SalesByPeriod {
 }
 
 export interface SalesByCashRegister {
-  id: number;
+  id: string;
   user: string;
   user_name: string;
   opened_at: string;
@@ -110,7 +110,7 @@ const financialReportsService = {
   },
 
   // Detalhes de um caixa específico
-  getCashRegisterDetail: async (cashRegisterId: number, companyId: number) => {
+  getCashRegisterDetail: async (cashRegisterId: string, companyId: number) => {
     try {
       const response = await api.get<{ success: boolean; data: any }>(
         `reports/cash-register/${cashRegisterId}/`,
@@ -126,7 +126,7 @@ const financialReportsService = {
   },
 
   // Detalhes das vendas de um usuário específico
-  getUserSalesDetail: async (userId: number, params: {
+  getUserSalesDetail: async (userId: string, params: {
     company_id?: number;
     start_date?: string;
     end_date?: string;

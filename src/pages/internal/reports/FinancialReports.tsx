@@ -12,7 +12,7 @@ import './FinancialReports.css';
 const UserSalesDetailModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  userId: number | null;
+  userId: string | null;
   companyId: number | undefined;
   startDate?: string;
   endDate?: string;
@@ -106,7 +106,7 @@ const UserSalesDetailModal: React.FC<{
                         <div className="order-header-detailed">
                           <div className="order-id">
                             <FiHash />
-                            <span>Comanda #{order.id}</span>
+                            <span>Comanda #{order.order_number || order.id}</span>
                           </div>
                           <div className="order-total">
                             <span>{formatCurrency(order.total_amount)}</span>
@@ -240,13 +240,13 @@ const UserSalesDetailModal: React.FC<{
 const CashRegisterDetailModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  cashRegisterId: number | null;
+  cashRegisterId: string | null;
   companyId: number | undefined;
-  onCashRegisterClosed?: () => void; // Callback após fechar o caixa
+  onCashRegisterClosed?: () => void;
 }> = ({ isOpen, onClose, cashRegisterId, companyId, onCashRegisterClosed }) => {
   const [loading, setLoading] = useState(false);
   const [details, setDetails] = useState<any>(null);
-  const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [showCloseCashModal, setShowCloseCashModal] = useState(false);
   const [closingAmount, setClosingAmount] = useState('');
@@ -453,7 +453,7 @@ const CashRegisterDetailModal: React.FC<{
     setShowCloseCashModal(true);
   };
 
-  const toggleOrder = (orderId: number) => {
+  const toggleOrder = (orderId: string) => {
     const newExpanded = new Set(expandedOrders);
     if (newExpanded.has(orderId)) {
       newExpanded.delete(orderId);
@@ -513,7 +513,7 @@ const CashRegisterDetailModal: React.FC<{
               <div className="modal-section">
                 <h3><FiHash /> Informações Gerais</h3>
                 <div className="info-grid">
-                  <div className="info-item"><span className="label">ID do Caixa</span><span className="value">{details.id}</span></div>
+                  <div className="info-item"><span className="label">Nº do Caixa</span><span className="value">#{details.register_number || details.id}</span></div>
                   <div className="info-item"><span className="label"><FiUser /> Operador</span><span className="value">{details.user_name}</span></div>
                   <div className="info-item"><span className="label"><FiClock /> Abertura</span><span className="value">{formatDate(details.opened_at)}</span></div>
                   <div className="info-item"><span className="label"><FiClock /> Fechamento</span><span className="value">{formatDate(details.closed_at)}</span></div>
@@ -608,7 +608,7 @@ const CashRegisterDetailModal: React.FC<{
                             <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 <span className="order-id" style={{ fontWeight: 700, fontSize: '0.95rem' }}>
-                                  Comanda #{order.id}
+                                  Comanda #{order.order_number || order.id}
                                 </span>
                                 <span className="order-customer" style={{ fontSize: '0.85rem', color: '#6b7280' }}>
                                   {order.dependente_name ? `${order.dependente_name} (Resp: ${order.customer_name})` : order.customer_name}
@@ -958,7 +958,7 @@ const FinancialReports: React.FC = () => {
 
   // State do Modal
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<number | null>(null);
+  const [selectedCashRegisterId, setSelectedCashRegisterId] = useState<string | null>(null);
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('userData') || '{}');
@@ -1147,7 +1147,7 @@ const FinancialReports: React.FC = () => {
                                 <div className="cash-card-header">
                                   <div className="cash-id">
                                     <FiHash size={14} />
-                                    <span>Caixa #{cr.id}</span>
+                                    <span>Caixa #{cr.register_number || cr.id}</span>
                                   </div>
                                   <span className={`cash-status ${cr.status === 'closed' ? 'closed' : 'open'}`}>
                                     {cr.status === 'closed' ? '✓ Fechado' : '● Aberto'}

@@ -30,8 +30,8 @@ export interface CashRegisterCloseResponse {
 
 // Cash Register
 export interface CashRegister {
-  id: number;
-  user: number;
+  id: string;
+  user: string;
   user_email: string;
   user_name: string;
   company: number;
@@ -53,7 +53,7 @@ export interface CashRegister {
 
 // User
 export interface User {
-  id: number;
+  id: string;
   username: string;
   email: string;
   first_name: string;
@@ -96,7 +96,7 @@ export interface Company {
 
 // Company Config
 export interface CompanyConfig {
-  id: number;
+  id: string;
   company: number;
   company_legal_name: string;
   business_name: string;
@@ -116,7 +116,7 @@ export interface CompanyConfig {
 
 // Customer
 export interface Customer {
-  id: number;
+  id: string;
   company: number;
   company_name?: string;
   cpf: string;
@@ -137,11 +137,11 @@ export interface Customer {
 
 // Dependente
 export interface Dependente {
-  id: number;
+  id: string;
   nome: string;
   data_nascimento: string;
   idade: number;
-  cliente: number;
+  cliente: string;
   cliente_nome: string;
   aprovacao_responsavel: boolean;
   pcd: boolean;
@@ -151,12 +151,12 @@ export interface Dependente {
 
 // Jump Usage
 export interface JumpUsage {
-  id: number;
+  id: string;
   company: number;
-  customer: number;
+  customer: string;
   customer_name: string;
   customer_telefone?: string;
-  dependente: number | null;
+  dependente: string | null;
   dependente_name: string | null;
   company_name: string;
   contracted_hours: number;
@@ -174,9 +174,10 @@ export interface JumpUsage {
   time_extra_hours: number | null;
   created_at: string;
   updated_at: string;
-  order?: number | null;
+  order?: string | null;
+  order_number?: number | null;
   order_closed?: boolean;
-  user_id?: number | null;
+  user_id?: string | null;
 }
 
 // Login
@@ -203,7 +204,7 @@ export interface PaginatedResponse<T> {
 
 // Product Types
 export interface ProductType {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   created_at: string;
@@ -211,11 +212,11 @@ export interface ProductType {
 }
 
 export interface Product {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   price: string;
-  product_type: number;
+  product_type: string;
   product_type_name: string;
   is_active: boolean;
   created_at: string;
@@ -223,8 +224,8 @@ export interface Product {
 }
 
 export interface EquipmentUnit {
-  id: number;
-  product: number;
+  id: string;
+  product: string;
   product_name: string;
   number: string;
   status: 'available' | 'in_use' | 'maintenance';
@@ -236,9 +237,9 @@ export interface EquipmentUnit {
 
 // Orders
 export interface OrderItem {
-  id: number;
-  order: number;
-  product: number;
+  id: string;
+  order: string;
+  product: string;
   product_name: string;
   product_type_name: string;
   item_type: 'jump_time' | 'consumable' | 'additional_time';
@@ -251,18 +252,19 @@ export interface OrderItem {
 }
 
 export interface Order {
-  id: number;
+  id: string;
+  order_number?: number;
   company: number;
-  customer: number;
+  customer: string;
   customer_name: string;
   customer_cpf?: string;
   customer_pcd?: boolean;
-  dependente: number | null;
+  dependente: string | null;
   dependente_name: string | null;
   dependente_pcd?: boolean | null;
   is_pcd?: boolean;
-  cash_register: number | null;
-  transferred_to_user: number | null;
+  cash_register: string | null;
+  transferred_to_user: string | null;
   status: 'open' | 'closed' | 'cancelled';
   total_amount: string;
   total?: string;

@@ -15,7 +15,7 @@ class CustomerService {
   /**
    * Busca um cliente pelo ID
    */
-  async getById(id: number, companyId?: number): Promise<ApiResponse<Customer>> {
+  async getById(id: string, companyId?: number): Promise<ApiResponse<Customer>> {
     const url = companyId
       ? `/customers/${id}/?company_id=${companyId}`
       : `/customers/${id}/`;
@@ -35,7 +35,7 @@ class CustomerService {
   /**
    * Atualiza um cliente
    */
-  async update(id: number, data: Partial<Customer>, companyId?: number): Promise<ApiResponse<Customer>> {
+  async update(id: string, data: Partial<Customer>, companyId?: number): Promise<ApiResponse<Customer>> {
     const url = companyId
       ? `/customers/${id}/update/?company_id=${companyId}`
       : `/customers/${id}/update/`;
@@ -45,7 +45,7 @@ class CustomerService {
   /**
    * Atualiza parcialmente um cliente
    */
-  async partialUpdate(id: number, data: Partial<Customer>, companyId?: number): Promise<ApiResponse<Customer>> {
+  async partialUpdate(id: string, data: Partial<Customer>, companyId?: number): Promise<ApiResponse<Customer>> {
     const url = companyId
       ? `/customers/${id}/?company_id=${companyId}`
       : `/customers/${id}/`;
@@ -55,7 +55,7 @@ class CustomerService {
   /**
    * Deleta um cliente
    */
-  async delete(id: number, companyId?: number): Promise<ApiResponse<void>> {
+  async delete(id: string, companyId?: number): Promise<ApiResponse<void>> {
     const url = companyId
       ? `/customers/${id}/delete/?company_id=${companyId}`
       : `/customers/${id}/delete/`;
@@ -77,7 +77,7 @@ class CustomerService {
   /**
    * Lista dependentes de um cliente específico
    */
-  async getCustomerDependentes(customerId: number, companyId?: number): Promise<ApiResponse<Dependente[]>> {
+  async getCustomerDependentes(customerId: string, companyId?: number): Promise<ApiResponse<Dependente[]>> {
     const url = companyId
       ? `/customers/${customerId}/dependentes/?company_id=${companyId}`
       : `/customers/${customerId}/dependentes/`;
@@ -87,7 +87,7 @@ class CustomerService {
   /**
    * Busca um dependente pelo ID
    */
-  async getDependenteById(id: number, companyId?: number): Promise<ApiResponse<Dependente>> {
+  async getDependenteById(id: string, companyId?: number): Promise<ApiResponse<Dependente>> {
     const url = companyId
       ? `/dependentes/${id}/?company_id=${companyId}`
       : `/dependentes/${id}/`;
@@ -107,7 +107,7 @@ class CustomerService {
   /**
    * Atualiza um dependente
    */
-  async updateDependente(id: number, data: Partial<Dependente>, companyId?: number): Promise<ApiResponse<Dependente>> {
+  async updateDependente(id: string, data: Partial<Dependente>, companyId?: number): Promise<ApiResponse<Dependente>> {
     const url = companyId
       ? `/dependentes/${id}/update/?company_id=${companyId}`
       : `/dependentes/${id}/update/`;
@@ -117,7 +117,7 @@ class CustomerService {
   /**
    * Deleta um dependente
    */
-  async deleteDependente(id: number, companyId?: number): Promise<ApiResponse<void>> {
+  async deleteDependente(id: string, companyId?: number): Promise<ApiResponse<void>> {
     const url = companyId
       ? `/dependentes/${id}/delete/?company_id=${companyId}`
       : `/dependentes/${id}/delete/`;
@@ -139,7 +139,7 @@ class CustomerService {
   /**
    * Gera termo de responsabilidade em PDF para um dependente
    */
-  async gerarTermo(dependenteId: number, companyId?: number): Promise<Blob> {
+  async gerarTermo(dependenteId: string, companyId?: number): Promise<Blob> {
     const url = companyId
       ? `/dependentes/${dependenteId}/termo/?company_id=${companyId}`
       : `/dependentes/${dependenteId}/termo/`;

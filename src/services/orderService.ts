@@ -31,7 +31,7 @@ class OrderService {
   }
 
   // Buscar pedido por ID
-  async getById(orderId: number, companyId?: number): Promise<ApiResponse<Order>> {
+  async getById(orderId: string, companyId?: number): Promise<ApiResponse<Order>> {
     try {
       const params: any = {};
       if (companyId) params.company_id = companyId;
@@ -47,7 +47,7 @@ class OrderService {
   }
 
   // Buscar pedido por jump_usage_id
-  async getByJumpUsage(jumpUsageId: number, companyId?: number): Promise<ApiResponse<Order>> {
+  async getByJumpUsage(jumpUsageId: string, companyId?: number): Promise<ApiResponse<Order>> {
     try {
       const params: any = {};
       if (companyId) params.company_id = companyId;
@@ -64,10 +64,10 @@ class OrderService {
 
   // Criar pedido
   async create(orderData: {
-    jump_usage: number;
+    jump_usage: string;
     company: number;
-    customer: number;
-    dependente?: number | null;
+    customer: string;
+    dependente?: string | null;
   }): Promise<ApiResponse<Order>> {
     try {
       const response = await api.post<ApiResponse<Order>>('/orders/create/', orderData);
@@ -82,10 +82,10 @@ class OrderService {
 
   // Fechar pedido
   async close(
-    orderId: number, 
+    orderId: string, 
     companyId?: number, 
-    adjustments?: { [jumpId: number]: number } | { dryRun?: boolean },
-    paymentDetails?: {payment_type: number, amount: string}[]
+    adjustments?: { [jumpId: string]: number } | { dryRun?: boolean },
+    paymentDetails?: {payment_type: string, amount: string}[]
   ): Promise<ApiResponse<Order> & { cupom_fiscal?: string; preview?: any }> {
     try {
       const params: any = {};
@@ -121,12 +121,13 @@ class OrderService {
 
   // Adicionar item ao pedido
   async addItem(itemData: {
-    order: number;
-    product: number;
+    order: string;
+    product: string;
     item_type: 'jump_time' | 'consumable' | 'additional_time';
     quantity: number;
     unit_price?: string;
     description?: string;
+    equipment_unit?: string;
   }): Promise<ApiResponse<OrderItem>> {
     try {
       const response = await api.post<ApiResponse<OrderItem>>('/orders/items/create/', itemData);
@@ -140,7 +141,7 @@ class OrderService {
   }
 
   // Remover item do pedido
-  async removeItem(itemId: number, companyId?: number): Promise<ApiResponse<void>> {
+  async removeItem(itemId: string, companyId?: number): Promise<ApiResponse<void>> {
     try {
       const params: any = {};
       if (companyId) params.company_id = companyId;
@@ -156,7 +157,7 @@ class OrderService {
   }
 
   // Alternar estado de pago de um item
-  async toggleItemPago(itemId: number, companyId?: number): Promise<ApiResponse<OrderItem>> {
+  async toggleItemPago(itemId: string, companyId?: number): Promise<ApiResponse<OrderItem>> {
     try {
       const params: any = {};
       if (companyId) params.company_id = companyId;
@@ -172,11 +173,11 @@ class OrderService {
   }
 
   // Obter cupom fiscal de um pedido fechado
-  async getCupomFiscal(orderId: number, companyId?: number): Promise<{ success: boolean; data?: { order_id: number; cupom_fiscal: string }; error?: string }> {
+  async getCupomFiscal(orderId: string, companyId?: number): Promise<{ success: boolean; data?: { order_id: string; cupom_fiscal: string }; error?: string }> {
     try {
       const params: any = {};
       if (companyId) params.company_id = companyId;
-      const response = await api.get<{ success: boolean; data: { order_id: number; cupom_fiscal: string } }>(`/orders/${orderId}/cupom-fiscal/`, { params });
+      const response = await api.get<{ success: boolean; data: { order_id: string; cupom_fiscal: string } }>(`/orders/${orderId}/cupom-fiscal/`, { params });
       return response;
     } catch (error: any) {
       return {

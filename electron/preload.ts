@@ -8,3 +8,8 @@ contextBridge.exposeInMainWorld("api", {
     return printers;
   }
 });
+
+contextBridge.exposeInMainWorld("electronAPI", {
+  getMachineId: (): Promise<string> => ipcRenderer.invoke("get-machine-id"),
+  getMachineName: (): Promise<string> => ipcRenderer.invoke("get-machine-name"),
+});

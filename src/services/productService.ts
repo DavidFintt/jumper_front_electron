@@ -23,12 +23,12 @@ class ProductService {
   /**
    * Lista todos os produtos
    */
-  async list(filters?: { product_type_id?: number; product_type_name?: string; is_active?: boolean; company_id?: number }): Promise<ApiResponse<Product[]>> {
+  async list(filters?: { product_type_id?: string; product_type_name?: string; is_active?: boolean; company_id?: number }): Promise<ApiResponse<Product[]>> {
     let url = '/products/';
     const params = new URLSearchParams();
     
     if (filters?.product_type_id) {
-      params.append('product_type_id', filters.product_type_id.toString());
+      params.append('product_type_id', filters.product_type_id);
     }
     
     if (filters?.product_type_name) {
@@ -53,7 +53,7 @@ class ProductService {
   /**
    * Busca um produto pelo ID
    */
-  async getById(id: number): Promise<ApiResponse<Product>> {
+  async getById(id: string): Promise<ApiResponse<Product>> {
     return api.get<ApiResponse<Product>>(`/products/${id}/`);
   }
 
@@ -71,7 +71,7 @@ class ProductService {
   /**
    * Atualiza um produto
    */
-  async update(id: number, data: Partial<Product>, companyId?: number): Promise<ApiResponse<Product>> {
+  async update(id: string, data: Partial<Product>, companyId?: number): Promise<ApiResponse<Product>> {
     let url = `/products/${id}/update/`;
     if (companyId) {
       url += `?company_id=${companyId}`;
@@ -82,7 +82,7 @@ class ProductService {
   /**
    * Deleta um produto (soft delete)
    */
-  async delete(id: number, companyId?: number): Promise<ApiResponse<void>> {
+  async delete(id: string, companyId?: number): Promise<ApiResponse<void>> {
     let url = `/products/${id}/delete/`;
     if (companyId) {
       url += `?company_id=${companyId}`;

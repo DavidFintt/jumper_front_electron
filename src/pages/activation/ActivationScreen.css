@@ -1,0 +1,161 @@
+.activation-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #001166 0%, #002299 100%);
+  padding: 20px;
+}
+
+.activation-container {
+  background: white;
+  border-radius: 16px;
+  padding: 48px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.activation-logo {
+  margin-bottom: 32px;
+}
+
+.logo-image {
+  width: 120px;
+  height: auto;
+}
+
+.activation-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 12px 0;
+}
+
+.activation-subtitle {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0 0 32px 0;
+  line-height: 1.5;
+}
+
+.code-input-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.code-prefix {
+  font-family: 'Courier New', monospace;
+  font-size: 24px;
+  font-weight: 700;
+  color: #001166;
+  letter-spacing: 2px;
+}
+
+.code-separator {
+  font-size: 24px;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.code-input {
+  width: 80px;
+  height: 56px;
+  font-family: 'Courier New', monospace;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.code-input:focus {
+  border-color: #001166;
+  box-shadow: 0 0 0 3px rgba(0, 17, 102, 0.1);
+}
+
+.code-input:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+.code-input::placeholder {
+  color: #d1d5db;
+}
+
+.activation-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.activation-progress {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.activation-button {
+  width: 100%;
+  padding: 16px 32px;
+  background: #001166;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.activation-button:hover:not(:disabled) {
+  background: #002299;
+  transform: translateY(-1px);
+}
+
+.activation-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.activation-help {
+  margin-top: 24px;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+@media (max-width: 480px) {
+  .activation-container {
+    padding: 32px 24px;
+  }
+
+  .code-input-container {
+    flex-wrap: wrap;
+  }
+
+  .code-prefix {
+    font-size: 20px;
+  }
+
+  .code-input {
+    width: 70px;
+    height: 48px;
+    font-size: 20px;
+  }
+}

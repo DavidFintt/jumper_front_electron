@@ -1,11 +1,13 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Login, TVMode } from './pages/external';
-import { SelectCompany, Dashboard, Config, Customers, Products, FinancialReports, UsersManagement, SuperuserMode, AdminPanel, FiscalCertificate } from './pages/internal';
+import { SelectCompany, Dashboard, Config, Customers, Products, FinancialReports, UsersManagement, SuperuserMode, AdminPanel, FiscalCertificate, ActivatePdv } from './pages/internal';
+import { ActivationScreen } from './pages/activation';
 import { ToastContainer } from 'react-toastify';
+import { activationService } from './services';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css'
 
-// Componente de rota protegida
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const accessToken = localStorage.getItem('accessToken');
   
@@ -16,7 +18,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Componente de rota para admin
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const accessToken = localStorage.getItem('accessToken');
   const userStr = localStorage.getItem('userData');
@@ -37,6 +38,42 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const [isBootstrapped, setIsBootstrapped] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    checkBootstrap();
+  }, []);
+
+  const checkBootstrap = async () => {
+    try {
+      const bootstrapped = await activationService.isBootstrapped();
+      setIsBootstrapped(bootstrapped);
+    } catch (error) {
+      console.error('Erro ao verificar bootstrap:', error);
+      setIsBootstrapped(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleActivationSuccess = () => {
+    setIsBootstrapped(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="app-loading">
+        <div className="app-loading-spinner"></div>
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (!isBootstrapped) {
+    return <ActivationScreen onActivationSuccess={handleActivationSuccess} />;
+  }
+
   return (
     <Router>
       <ToastContainer
@@ -50,6 +87,7 @@ function App() {
         draggable
         pauseOnHover
         theme="light"
+        style={{ zIndex: 99999 }}
       />
       <Routes>
         {/* Rotas Públicas */}
@@ -134,6 +172,14 @@ function App() {
           element={
             <AdminRoute>
               <FiscalCertificate />
+            </AdminRoute>
+          } 
+        />
+        <Route 
+          path="/activate-pdv" 
+          element={
+            <AdminRoute>
+              <ActivatePdv />
             </AdminRoute>
           } 
         />

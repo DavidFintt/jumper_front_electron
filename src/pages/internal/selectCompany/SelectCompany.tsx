@@ -248,8 +248,8 @@ function SelectCompany() {
           // Se venceu, bloquear acesso
           if (companyStatus.is_expired) {
             toast.error(companyStatus.message || 'Assinatura vencida! Entre em contato com o suporte.', {
-              autoClose: false,
-              closeOnClick: false,
+              autoClose: 10000,
+              closeOnClick: true,
             });
             setError(companyStatus.message || 'Assinatura desta empresa está vencida.');
             setSelectedCompany(null);

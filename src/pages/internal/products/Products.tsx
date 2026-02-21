@@ -118,14 +118,11 @@ export const Products: React.FC = () => {
     console.log('handleEdit chamado para produto:', product);
     setEditingProduct(product);
     
-    // Se for tipo 1 (Tempo de uso), extrai a duração do nome (se aplicável)
     let duration = '';
-    if (product.product_type === 1) {
-      // Tenta extrair duração padrão do nome (ex: "5 Minutos", "1 Hora", "2 Horas")
+    if (product.product_type_name === 'Tempo de uso') {
       const minuteMatch = product.name.match(/(\d+)\s*Minutos/i);
       if (minuteMatch) {
         const minutes = parseInt(minuteMatch[1]);
-        // Converte minutos para horas (formato decimal)
         if (minutes === 5) duration = '0.0833';
         else if (minutes === 10) duration = '0.1667';
         else if (minutes === 15) duration = '0.25';
@@ -326,10 +323,10 @@ export const Products: React.FC = () => {
         return;
       }
       
-      const productType = parseInt(formData.product_type);
+      const productType = formData.product_type;
       
       // Verifica se é "Tempo de uso" pelo nome do tipo
-      const selectedType = productTypes.find(t => t.id.toString() === formData.product_type);
+      const selectedType = productTypes.find(t => t.id === formData.product_type);
       const isTempoDeUso = selectedType?.name === 'Tempo de uso';
       
       // Se for "Tempo de uso", valida a duração
@@ -378,7 +375,7 @@ export const Products: React.FC = () => {
           const pType = productTypes.find(pt => pt.id === p.product_type);
           return pType?.name === 'Tempo de uso' && 
             p.is_active && 
-            p.name !== 'Tempo Adicional' && // Exclui o produto do sistema
+            p.name !== 'Tempo Adicional' &&
             (!editingProduct || p.id !== editingProduct.id);
         });
         

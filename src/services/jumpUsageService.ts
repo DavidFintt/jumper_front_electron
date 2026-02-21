@@ -36,7 +36,7 @@ class JumpUsageService {
   /**
    * Busca um uso pelo ID
    */
-  async getById(id: number, companyId?: number): Promise<ApiResponse<JumpUsage>> {
+  async getById(id: string, companyId?: number): Promise<ApiResponse<JumpUsage>> {
     const url = companyId
       ? `/jump-usage/${id}/?company_id=${companyId}`
       : `/jump-usage/${id}/`;
@@ -47,8 +47,8 @@ class JumpUsageService {
    * Inicia um novo uso
    */
   async create(data: {
-    customer: number;
-    dependente?: number | null;
+    customer: string;
+    dependente?: string | null;
   }, companyId?: number): Promise<ApiResponse<JumpUsage>> {
     const url = companyId
       ? `/jump-usage/create/?company_id=${companyId}`
@@ -70,7 +70,7 @@ class JumpUsageService {
    * Finaliza um uso
    * Nota: company_id não é mais necessário, o backend busca automaticamente do jump
    */
-  async finish(id: number, data?: any, companyId?: number): Promise<JumpFinishResponse> {
+  async finish(id: string, data?: any, companyId?: number): Promise<JumpFinishResponse> {
     return api.patch<JumpFinishResponse>(`/jump-usage/${id}/finish/`, data || {});
   }
 
@@ -78,7 +78,7 @@ class JumpUsageService {
    * Atualiza um uso (ex: adicionar horas contratadas)
    * Nota: company_id não é mais necessário, o backend busca automaticamente do jump
    */
-  async update(id: number, data: Partial<JumpUsage>, companyId?: number): Promise<ApiResponse<JumpUsage>> {
+  async update(id: string, data: Partial<JumpUsage>, companyId?: number): Promise<ApiResponse<JumpUsage>> {
     return api.patch<ApiResponse<JumpUsage>>(`/jump-usage/${id}/update/`, data);
   }
 
@@ -86,7 +86,7 @@ class JumpUsageService {
    * Pausa um uso do jump
    * Nota: company_id não é mais necessário, o backend busca automaticamente do jump
    */
-  async pause(id: number, companyId?: number): Promise<ApiResponse<JumpUsage>> {
+  async pause(id: string, companyId?: number): Promise<ApiResponse<JumpUsage>> {
     return api.post<ApiResponse<JumpUsage>>(`/jump-usage/${id}/pause/`, {});
   }
 
@@ -94,7 +94,7 @@ class JumpUsageService {
    * Retoma um uso do jump pausado
    * Nota: company_id não é mais necessário, o backend busca automaticamente do jump
    */
-  async resume(id: number, companyId?: number): Promise<ApiResponse<JumpUsage>> {
+  async resume(id: string, companyId?: number): Promise<ApiResponse<JumpUsage>> {
     return api.post<ApiResponse<JumpUsage>>(`/jump-usage/${id}/resume/`, {});
   }
 }

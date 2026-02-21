@@ -15,7 +15,7 @@ class UserService {
   /**
    * Busca um usuário pelo ID
    */
-  async getById(id: number, companyId?: number): Promise<ApiResponse<User>> {
+  async getById(id: string, companyId?: number): Promise<ApiResponse<User>> {
     const url = companyId
       ? `/users/${id}/?company_id=${companyId}`
       : `/users/${id}/`;
@@ -44,7 +44,7 @@ class UserService {
   /**
    * Atualiza um usuário
    */
-  async update(id: number, data: Partial<User> & {
+  async update(id: string, data: Partial<User> & {
     companies_managed?: number[];
   }, companyId?: number): Promise<ApiResponse<User>> {
     const url = companyId
@@ -56,7 +56,7 @@ class UserService {
   /**
    * Atualiza parcialmente um usuário
    */
-  async partialUpdate(id: number, data: Partial<User> & {
+  async partialUpdate(id: string, data: Partial<User> & {
     companies_managed?: number[];
   }, companyId?: number): Promise<ApiResponse<User>> {
     const url = companyId
@@ -68,7 +68,7 @@ class UserService {
   /**
    * Deleta um usuário
    */
-  async delete(id: number, companyId?: number): Promise<ApiResponse<void>> {
+  async delete(id: string, companyId?: number): Promise<ApiResponse<void>> {
     const url = companyId
       ? `/users/${id}/delete/?company_id=${companyId}`
       : `/users/${id}/delete/`;

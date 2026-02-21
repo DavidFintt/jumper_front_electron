@@ -11,3 +11,4 @@ export { AdminPanel } from './adminPanel';
 export { AdminUsers } from './adminUsers';
 export { Fiscal } from './fiscal';
 export { FiscalCertificate } from './fiscalCertificate';
+export { ActivatePdv } from './activatePdv';

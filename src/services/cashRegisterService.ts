@@ -2,8 +2,8 @@ import api from './api';
 import type { CashRegisterCloseResponse } from './types';
 
 export interface CashRegister {
-  id: number;
-  user: number;
+  id: string;
+  user: string;
   user_email: string;
   user_name: string;
   company: number;
@@ -23,6 +23,16 @@ export interface CashRegister {
   updated_at: string;
 }
 
+// Cache para o caixa atual - evita delay ao navegar entre menus
+interface CashRegisterCache {
+  data: CashRegister | null;
+  companyId: number;
+  timestamp: number;
+}
+
+let currentCashRegisterCache: CashRegisterCache | null = null;
+const CACHE_TTL = 30000; // 30 segundos de cache
+
 export interface OpenCashRegisterData {
   opening_amount: number;
   opening_notes?: string;
@@ -31,7 +41,7 @@ export interface OpenCashRegisterData {
 export interface CloseCashRegisterData {
   closing_amount: number;
   closing_notes?: string;
-  transfer_to_user_id?: number;
+  transfer_to_user_id?: string;
 }
 
 export interface WithdrawalData {
@@ -45,6 +55,10 @@ const cashRegisterService = {
     try {
       const params = companyId ? { company_id: companyId } : {};
       const response = await api.post('cash-register/open/', data, { params });
+      // Invalidar cache após abrir caixa
+      if (response.success) {
+        currentCashRegisterCache = null;
+      }
       return response;
     } catch (error: any) {
       return {
@@ -55,9 +69,13 @@ const cashRegisterService = {
   },
 
   // Fechar caixa
-  close: async (cashRegisterId: number, data: CloseCashRegisterData) => {
+  close: async (cashRegisterId: string, data: CloseCashRegisterData) => {
     try {
       const response = await api.post(`cash-register/${cashRegisterId}/close/`, data);
+      // Invalidar cache após fechar caixa
+      if (response.success) {
+        currentCashRegisterCache = null;
+      }
       return response;
     } catch (error: any) {
       return {
@@ -68,11 +86,37 @@ const cashRegisterService = {
     }
   },
 
-  // Buscar caixa atual do usuário
-  getCurrent: async (companyId?: number) => {
+  // Buscar caixa atual do usuário (com cache para evitar delay)
+  getCurrent: async (companyId?: number, forceRefresh: boolean = false) => {
     try {
       const params = companyId ? { company_id: companyId } : {};
+      
+      // Verificar cache se não forçar refresh
+      if (!forceRefresh && companyId && currentCashRegisterCache) {
+        const now = Date.now();
+        const cacheValid = 
+          currentCashRegisterCache.companyId === companyId &&
+          (now - currentCashRegisterCache.timestamp) < CACHE_TTL;
+        
+        if (cacheValid) {
+          return {
+            success: true,
+            data: currentCashRegisterCache.data
+          };
+        }
+      }
+      
       const response = await api.get('cash-register/current/', { params });
+      
+      // Atualizar cache
+      if (companyId && response.success) {
+        currentCashRegisterCache = {
+          data: response.data || null,
+          companyId,
+          timestamp: Date.now()
+        };
+      }
+      
       return response;
     } catch (error: any) {
       return {
@@ -80,6 +124,11 @@ const cashRegisterService = {
         error: error.response?.data?.error || 'Erro ao buscar caixa atual'
       };
     }
+  },
+
+  // Invalidar cache do caixa (chamar após abrir/fechar caixa)
+  invalidateCache: () => {
+    currentCashRegisterCache = null;
   },
 
   // Listar caixas
@@ -96,7 +145,7 @@ const cashRegisterService = {
   },
 
   // Buscar detalhes de um caixa
-  getById: async (cashRegisterId: number) => {
+  getById: async (cashRegisterId: string) => {
     try {
       const response = await api.get(`cash-register/${cashRegisterId}/`);
       return response;
@@ -109,7 +158,7 @@ const cashRegisterService = {
   },
 
   // Realizar sangria do caixa
-  withdrawal: async (cashRegisterId: number, data: WithdrawalData) => {
+  withdrawal: async (cashRegisterId: string, data: WithdrawalData) => {
     try {
       const response = await api.post(`cash-register/${cashRegisterId}/withdrawal/`, data);
       return response;

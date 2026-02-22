@@ -7,7 +7,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && electron-builder",
+    "build": "vite build && electron-builder --win",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -32,17 +32,24 @@
       "output": "release"
     },
     "win": {
-      "target": "nsis",
+      "target": ["nsis", "zip"],
       "icon": "public/logo.png"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://updates.jumpersystem.com.br"
+      }
+    ]
   },
   "dependencies": {
     "axios": "^1.13.0",
+    "electron-updater": "^6.8.3",
     "node-machine-id": "^1.1.12",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

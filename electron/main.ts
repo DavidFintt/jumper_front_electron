@@ -3,7 +3,8 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
 import { machineIdSync } from "node-machine-id";
-import { ChildProcess, spawn} from "node:child_process";
+import { ChildProcess, spawn } from "node:child_process";
+import { initAutoUpdater, checkForUpdates } from "./utils/autoUpdater";
 
 const isDev = !app.isPackaged;
 let mainWindow: BrowserWindow | null = null;
@@ -59,7 +60,13 @@ function waitForDjango(url: string, retries = 120, interval = 500): Promise<void
   });
 }
 
-function startDjango() {
+function sendLoadingStep(message: string) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("loading-step", message);
+  }
+}
+
+function runBackendWithProgress(): Promise<void> {
   const djangoBin = getDjangoPath();
   const djangoDir = path.dirname(djangoBin);
 
@@ -68,50 +75,72 @@ function startDjango() {
   log(`Bin exists: ${fs.existsSync(djangoBin)}`);
 
   const dbPath = path.join(app.getPath('userData'), 'jump.db');
-
   const env = {
     ...process.env,
     PYTHONUNBUFFERED: "1",
     DB_PATH: dbPath,
   };
 
-  const migrate = spawn(djangoBin, ["migrate", "--run-syncdb"], {
-    cwd: djangoDir,
-    env,
-  });
+  return new Promise((resolve, reject) => {
+    sendLoadingStep("Iniciando backend...");
 
-  migrate.on("exit", (code) => {
-    log (`Migrate exited with code: ${code}`);
-    
-    djangoProcess = spawn(djangoBin, [
-    "runserver",
-    "127.0.0.1:8000",
-    "--noreload",
-    ], {
+    const migrate = spawn(djangoBin, ["migrate", "--run-syncdb"], {
       cwd: djangoDir,
       env,
     });
+    sendLoadingStep("Carregando banco de dados...");
 
-    djangoProcess.stdout?.on("data", (data) => {
-    log(`Django stdout: ${data}`);
+    migrate.stdout?.on("data", (data) => {
+      log(`Migrate stdout: ${data}`);
+    });
+    migrate.stderr?.on("data", (data) => {
+      log(`Migrate stderr: ${data}`);
     });
 
-    djangoProcess.stderr?.on("data", (data) => {
-      log(`Django stderr: ${data}`);
+    migrate.on("error", (err) => {
+      log(`Migrate error: ${err}`);
+      reject(err);
     });
 
-    djangoProcess.on("error", (error) => {
-      log(`Django spawn error: ${error}`);
+    migrate.on("exit", (code) => {
+      log(`Migrate exited with code: ${code}`);
+      if (code !== 0) {
+        reject(new Error(`Migrate falhou com código ${code}`));
+        return;
+      }
+      sendLoadingStep("Iniciando servidor...");
+
+      djangoProcess = spawn(djangoBin, [
+        "runserver",
+        "127.0.0.1:8000",
+        "--noreload",
+      ], {
+        cwd: djangoDir,
+        env,
+      });
+
+      djangoProcess.stdout?.on("data", (data) => {
+        log(`Django stdout: ${data}`);
+      });
+      djangoProcess.stderr?.on("data", (data) => {
+        log(`Django stderr: ${data}`);
+      });
+      djangoProcess.on("error", (error) => {
+        log(`Django spawn error: ${error}`);
+        reject(error);
+      });
+      djangoProcess.on("exit", (code, signal) => {
+        log(`Django exited — code: ${code}, signal: ${signal}`);
+      });
+
+      log("Django process setup complete");
+      sendLoadingStep("Aguardando servidor...");
+
+      waitForDjango("http://127.0.0.1:8000/api/health/")
+        .then(resolve)
+        .catch(reject);
     });
-
-    djangoProcess.on("exit", (code, signal) => {
-      log(`Django exited — code: ${code}, signal: ${signal}`);
-    });
-
-    log("Django process setup complete");
-
-  })
-
+  });
 }
 
 
@@ -128,8 +157,26 @@ ipcMain.handle('get-machine-name', () => {
   return os.hostname();
 });
 
+ipcMain.handle('check-for-updates', () => {
+  checkForUpdates();
+});
+
+function getLoadingUrl(): string {
+  if (isDev && process.env.VITE_DEV_SERVER_URL) {
+    const base = process.env.VITE_DEV_SERVER_URL.replace(/\/$/, "");
+    return `${base}/loading.html`;
+  }
+  return path.join(__dirname, "../dist/loading.html");
+}
+
+function getAppUrl(): string {
+  if (isDev && process.env.VITE_DEV_SERVER_URL) {
+    return process.env.VITE_DEV_SERVER_URL;
+  }
+  return path.join(__dirname, "../dist/index.html");
+}
+
 async function createWindow() {
-  // Define o caminho do ícone
   const iconPath = isDev
     ? path.join(__dirname, "../public/logo.ico")
     : path.join(process.resourcesPath, "logo.ico");
@@ -143,20 +190,38 @@ async function createWindow() {
     }
   });
 
-  try {
-    await waitForDjango("http://127.0.0.1:8000/api/health/");
-
-    if (isDev && process.env.VITE_DEV_SERVER_URL) {
-      mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
-    } else {
-      mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
-    }
-    mainWindow.webContents.openDevTools();
-  } catch (error) {
-    log(`Django não iniciou: ${error}`);
-    mainWindow.loadFile(path.join(__dirname, "../dist/error.html"));
+  const loadingUrl = getLoadingUrl();
+  if (loadingUrl.startsWith("http")) {
+    mainWindow.loadURL(loadingUrl);
+  } else {
+    mainWindow.loadFile(loadingUrl);
   }
-  
+
+  mainWindow.webContents.once("did-finish-load", () => {
+    runBackendWithProgress()
+      .then(() => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        const appUrl = getAppUrl();
+        if (appUrl.startsWith("http")) {
+          mainWindow!.loadURL(appUrl);
+        } else {
+          mainWindow!.loadFile(appUrl);
+        }
+        try {
+          initAutoUpdater(mainWindow!);
+          checkForUpdates();
+        } catch (err) {
+          log(`Erro ao inicializar auto-updater: ${err}`);
+        }
+        mainWindow!.webContents.openDevTools();
+      })
+      .catch((error) => {
+        log(`Backend não iniciou: ${error}`);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.loadFile(path.join(__dirname, "../dist/error.html"));
+        }
+      });
+  });
 
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -164,7 +229,6 @@ async function createWindow() {
 }
 
 app.on("ready", () => {
-  startDjango();
   createWindow();
 });
 

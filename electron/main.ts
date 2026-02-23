@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, Menu } from "electron";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
@@ -79,6 +79,7 @@ function runBackendWithProgress(): Promise<void> {
     ...process.env,
     PYTHONUNBUFFERED: "1",
     DB_PATH: dbPath,
+    LOG_FILE: logFile,
   };
 
   return new Promise((resolve, reject) => {
@@ -213,7 +214,6 @@ async function createWindow() {
         } catch (err) {
           log(`Erro ao inicializar auto-updater: ${err}`);
         }
-        mainWindow!.webContents.openDevTools();
       })
       .catch((error) => {
         log(`Backend não iniciou: ${error}`);
@@ -223,12 +223,22 @@ async function createWindow() {
       });
   });
 
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    const devToolsKeys = input.key === "F12"
+      || (input.control && input.shift && input.key.toLowerCase() === "i")
+      || (input.control && input.shift && input.key.toLowerCase() === "j");
+    if (devToolsKeys) {
+      event.preventDefault();
+    }
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
 }
 
 app.on("ready", () => {
+  Menu.setApplicationMenu(null);
   createWindow();
 });
 

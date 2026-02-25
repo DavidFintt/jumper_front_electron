@@ -246,7 +246,82 @@
 }
 
 /* ==================================
-   RESPONSIVENESS
+   COLLAPSED STATE (toggle)
+   ================================== */
+.sidebar.sidebar-collapsed {
+  width: 80px;
+}
+
+.sidebar.sidebar-collapsed .sidebar-company-name,
+.sidebar.sidebar-collapsed .sidebar-link-text,
+.sidebar.sidebar-collapsed .user-details,
+.sidebar.sidebar-collapsed .sidebar-action-text {
+  display: none;
+}
+
+.sidebar.sidebar-collapsed .sidebar-header {
+  justify-content: center;
+  padding: 20px 16px;
+}
+
+.sidebar.sidebar-collapsed .sidebar-link {
+  justify-content: center;
+  padding: 16px;
+}
+
+.sidebar.sidebar-collapsed .sidebar-icon {
+  margin-right: 0;
+}
+
+.sidebar.sidebar-collapsed .sidebar-footer {
+  padding: 16px 8px;
+}
+
+.sidebar.sidebar-collapsed .user-info {
+  justify-content: center;
+  padding: 8px;
+}
+
+.sidebar.sidebar-collapsed .user-avatar {
+  margin-right: 0;
+}
+
+.sidebar.sidebar-collapsed .sidebar-actions {
+  flex-direction: column;
+}
+
+/* Toggle button */
+.sidebar-toggle {
+  position: absolute;
+  right: -14px;
+  top: 24px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary-color, #007bff);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.sidebar-toggle:hover {
+  background: var(--primary-color-dark, #0056b3);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar {
+  position: relative;
+}
+
+/* ==================================
+   RESPONSIVENESS (mobile)
    ================================== */
 @media (max-width: 768px) {
   .sidebar {
@@ -254,9 +329,9 @@
   }
 
   .sidebar-company-name,
-  .sidebar-link span,
+  .sidebar-link-text,
   .user-details,
-  .sidebar-action-btn span {
+  .sidebar-action-text {
     display: none;
   }
   
@@ -284,6 +359,10 @@
 
   .sidebar-actions {
     flex-direction: column;
+  }
+
+  .sidebar-toggle {
+    display: none;
   }
 }
 

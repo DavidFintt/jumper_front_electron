@@ -1,21 +1,28 @@
 .layout {
   display: flex;
+  height: 100vh;
   min-height: 100vh;
+  overflow: hidden;
   background: var(--background-color, #F8F9FA);
 }
 
 .layout-content {
   flex: 1;
   margin-left: 260px;
-  padding: 24px;
+  padding: 0;
   transition: margin-left 0.3s ease;
+}
+
+.layout-content > * {
+  padding-left: 0 !important;
   overflow-x: hidden;
+  overflow-y: auto;
   background: var(--background-color, #F8F9FA);
 }
 
-/* Quando sidebar está fechada */
+/* Quando sidebar está recolhida */
 @media (min-width: 769px) {
-  .sidebar-closed + .layout-content {
+  .sidebar-collapsed + .layout-content {
     margin-left: 80px;
   }
 }

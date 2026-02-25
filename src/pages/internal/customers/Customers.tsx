@@ -70,6 +70,12 @@ const Customers: React.FC = () => {
   };
 
   const loadCustomers = async () => {
+    if (!companyId) {
+      setCustomers([]);
+      setLoading(false);
+      setError('Nenhuma empresa definida. Faça login novamente.');
+      return;
+    }
     try {
       setLoading(true);
       setError(null);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { FiGrid, FiUsers, FiPackage, FiSettings, FiLogOut, FiRepeat, FiBarChart2, FiBriefcase, FiFileText, FiLink } from 'react-icons/fi';
+import { FiGrid, FiUsers, FiPackage, FiSettings, FiLogOut, FiRepeat, FiBarChart2, FiBriefcase, FiFileText, FiLink, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { companyService } from '../../../services';
 import { formatCompanyName } from '../../../utils/companyUtils';
 import './Sidebar.css';
@@ -32,6 +32,7 @@ interface MenuItem {
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
+  const [collapsed, setCollapsed] = useState(true);
 
   const userStr = localStorage.getItem('userData');
   const companyStr = localStorage.getItem('companyData');
@@ -131,7 +132,7 @@ const Sidebar: React.FC = () => {
   }
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
       {/* Header */}
       <div className="sidebar-header">
         {companyData?.logo && (
@@ -151,14 +152,15 @@ const Sidebar: React.FC = () => {
             if (item.superuserOnly && !isSuperuser) return null;
             if (item.adminOnly && !isAdmin) return null;
             const Icon = item.icon;
-            return (
+              return (
               <li key={item.path}>
                 <NavLink 
                   to={item.path} 
                   className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+                  title={item.name}
                 >
                   <Icon className="sidebar-icon" size={20} />
-                  <span>{item.name}</span>
+                  <span className="sidebar-link-text">{item.name}</span>
                 </NavLink>
               </li>
             );
@@ -180,16 +182,26 @@ const Sidebar: React.FC = () => {
         <div className="sidebar-actions">
           <button onClick={handleLogout} className="sidebar-action-btn logout" title="Sair">
             <FiLogOut size={20} />
-            <span>Sair</span>
+            <span className="sidebar-action-text">Sair</span>
           </button>
           {isAdmin && (
             <button onClick={handleChangeCompany} className="sidebar-action-btn" title="Trocar Empresa">
               <FiRepeat size={20} />
-              <span>Trocar</span>
+              <span className="sidebar-action-text">Trocar</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Toggle button */}
+      <button
+        className="sidebar-toggle"
+        onClick={() => setCollapsed(!collapsed)}
+        title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+        aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+      >
+        {collapsed ? <FiChevronRight size={20} /> : <FiChevronLeft size={20} />}
+      </button>
     </aside>
   );
 };

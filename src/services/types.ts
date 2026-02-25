@@ -177,6 +177,7 @@ export interface JumpUsage {
   order?: string | null;
   order_number?: number | null;
   order_closed?: boolean;
+  order_cash_register_id?: string | null;
   user_id?: string | null;
 }
 

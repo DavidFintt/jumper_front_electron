@@ -4,21 +4,29 @@ import type { ApiResponse, JumpUsage, JumpFinishResponse } from './types';
 class JumpUsageService {
   /**
    * Lista todos os usos do jump
+   * @param companyId - ID da empresa
+   * @param cashRegisterId - ID do caixa (filtra jumps do caixa atual)
    */
-  async list(companyId?: number): Promise<ApiResponse<JumpUsage[]>> {
-    const url = companyId 
-      ? `/jump-usage/?company_id=${companyId}`
-      : '/jump-usage/';
+  async list(companyId?: number, cashRegisterId?: string): Promise<ApiResponse<JumpUsage[]>> {
+    const params = new URLSearchParams();
+    if (companyId) params.append('company_id', String(companyId));
+    if (cashRegisterId) params.append('cash_register_id', cashRegisterId);
+    const query = params.toString();
+    const url = query ? `/jump-usage/?${query}` : '/jump-usage/';
     return api.get<ApiResponse<JumpUsage[]>>(url);
   }
 
   /**
    * Lista apenas usos ativos (em andamento)
+   * @param companyId - ID da empresa
+   * @param cashRegisterId - ID do caixa (filtra jumps do caixa atual)
    */
-  async listActive(companyId?: number): Promise<ApiResponse<JumpUsage[]>> {
-    const url = companyId
-      ? `/jump-usage/active/?company_id=${companyId}`
-      : '/jump-usage/active/';
+  async listActive(companyId?: number, cashRegisterId?: string): Promise<ApiResponse<JumpUsage[]>> {
+    const params = new URLSearchParams();
+    if (companyId) params.append('company_id', String(companyId));
+    if (cashRegisterId) params.append('cash_register_id', cashRegisterId);
+    const query = params.toString();
+    const url = query ? `/jump-usage/active/?${query}` : '/jump-usage/active/';
     return api.get<ApiResponse<JumpUsage[]>>(url);
   }
 

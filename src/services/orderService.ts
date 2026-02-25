@@ -11,7 +11,7 @@ interface ApiResponse<T> {
 class OrderService {
 
   // Listar pedidos
-  async list(companyId?: number, status?: string, opts?: { dateFrom?: string; dateTo?: string; expired?: boolean }): Promise<ApiResponse<Order[]>> {
+  async list(companyId?: number, status?: string, opts?: { dateFrom?: string; dateTo?: string; expired?: boolean; cashRegisterId?: string | number }): Promise<ApiResponse<Order[]>> {
     try {
       const params: any = {};
       if (companyId) params.company_id = companyId;
@@ -19,6 +19,7 @@ class OrderService {
       if (opts?.dateFrom) params.date_from = opts.dateFrom;
       if (opts?.dateTo) params.date_to = opts.dateTo;
       if (typeof opts?.expired === 'boolean') params.expired = opts.expired;
+      if (opts?.cashRegisterId != null) params.cash_register_id = String(opts.cashRegisterId);
 
       const response = await api.get<ApiResponse<Order[]>>('/orders/', { params });
       return response;

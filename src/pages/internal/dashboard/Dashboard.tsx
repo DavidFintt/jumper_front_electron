@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../../../components/layout';
 import { Button, Alert } from '../../../components/ui';
-import { FiPlus, FiClock, FiAlertCircle, FiCheckCircle, FiX, FiSave, FiActivity, FiCalendar, FiCheck, FiCheckSquare, FiBarChart2, FiPause, FiPlay, FiSearch, FiFilter, FiTrendingUp, FiAlertTriangle, FiThumbsUp, FiMoon, FiShoppingCart, FiTrash2, FiMinus, FiPlusCircle, FiDollarSign, FiChevronRight, FiChevronDown, FiList, FiUser, FiPrinter, FiUserX, FiUsers, FiChevronUp, FiPackage, FiMessageSquare } from 'react-icons/fi';
+import { FiPlus, FiClock, FiAlertCircle, FiCheckCircle, FiX, FiSave, FiActivity, FiCalendar, FiCheck, FiCheckSquare, FiBarChart2, FiPause, FiPlay, FiSearch, FiFilter, FiTrendingUp, FiAlertTriangle, FiThumbsUp, FiMoon, FiShoppingCart, FiTrash2, FiMinus, FiPlusCircle, FiDollarSign, FiChevronRight, FiChevronDown, FiList, FiUser, FiPrinter, FiUserX, FiUsers, FiChevronUp, FiPackage, FiMessageSquare, FiMaximize2 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import './Dashboard.css';
@@ -186,6 +186,11 @@ const Dashboard: React.FC = () => {
 
   // Estados para alerta de jump expirado
   const [expiredJumpAlert, setExpiredJumpAlert] = useState<JumpUsage | null>(null);
+  
+  // Modal fullscreen de jumps
+  const [showJumpsExpandModal, setShowJumpsExpandModal] = useState(false);
+  const [modalFinishedJumps, setModalFinishedJumps] = useState<JumpUsage[]>([]);
+  const [modalLoading, setModalLoading] = useState(false);
   const [showExpiredJumpAlert, setShowExpiredJumpAlert] = useState(false);
   const [notifiedExpiredJumps, setNotifiedExpiredJumps] = useState<Set<string>>(new Set());
   const [recentlyUpdatedJumps, setRecentlyUpdatedJumps] = useState<Map<string, number>>(new Map());
@@ -484,7 +489,6 @@ const Dashboard: React.FC = () => {
     checkSubscription(true);
     
     loadCurrentCashRegister();
-    loadActiveJumps();
     loadOrders();
     loadFiscalPrinter();
     loadA4Printer();
@@ -542,14 +546,24 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(checkInterval);
   }, [activeJumps, companyId]);
 
-  // Atualizar jumps ativos a cada 5 segundos para refletir mudanças de outros lugares (ex: MobilePanel)
+  // Carregar jumps quando o caixa estiver definido (filtra por caixa atual)
   useEffect(() => {
     if (!companyId) return;
+    if (!currentCashRegister) {
+      setActiveJumps([]);
+      return;
+    }
+    loadActiveJumps();
+  }, [companyId, currentCashRegister?.id]);
+
+  // Atualizar jumps ativos a cada 5 segundos para refletir mudanças de outros lugares (ex: MobilePanel)
+  useEffect(() => {
+    if (!companyId || !currentCashRegister) return;
 
     const refreshInterval = setInterval(async () => {
       // Versão "silenciosa" do load que não causa re-renders desnecessários
       try {
-        const response = await jumpUsageService.listActive(companyId);
+        const response = await jumpUsageService.listActive(companyId, currentCashRegister.id);
         
         if (response.success && response.data) {
           const newJumps = response.data;
@@ -581,20 +595,25 @@ const Dashboard: React.FC = () => {
     }, 5000); // 5 segundos
 
     return () => clearInterval(refreshInterval);
-  }, [companyId]);
+  }, [companyId, currentCashRegister]);
 
-  const loadActiveJumps = async () => {
+  const loadActiveJumps = async (cashRegisterOverride?: CashRegister | null) => {
     try {
       if (!companyId) {
         console.warn('No companyId available, skipping active jumps load');
+        return;
+      }
+      const cashRegister = cashRegisterOverride ?? currentCashRegister;
+      if (!cashRegister) {
+        setActiveJumps([]);
         return;
       }
       
       setLoading(true);
       setError(null);
       
-      // Usa o jumpUsageService que já tem a base URL e token configurados
-      const response = await jumpUsageService.listActive(companyId);
+      // Usa o jumpUsageService que já tem a base URL e token configurados (filtra por caixa atual)
+      const response = await jumpUsageService.listActive(companyId, cashRegister.id);
 
       if (response.success) {
         // Força nova referência para garantir re-renderização
@@ -616,15 +635,27 @@ const Dashboard: React.FC = () => {
         console.warn('No companyId available, skipping orders load');
         return;
       }
+      if (!currentCashRegister?.id) {
+        setOrders([]);
+        return;
+      }
       
       const statusParam = ordersShowClosed ? 'closed' : 'open';
       const response = await orderService.list(companyId, statusParam, {
         dateFrom: ordersDateFrom || undefined,
         dateTo: ordersDateTo || undefined,
-        // sem filtro extra
+        cashRegisterId: currentCashRegister.id,
       });
       if (response.success) {
-        setOrders(response.data || []);
+        const rawOrders = response.data || [];
+        // Filtro de segurança: exibir apenas comandas do caixa atual
+        const cashRegisterIdStr = String(currentCashRegister.id);
+        const filtered = rawOrders.filter((o: Order) => {
+          const cr = o.cash_register;
+          const orderCashRegisterId = typeof cr === 'string' ? cr : (cr && typeof cr === 'object' && 'id' in cr ? (cr as { id: string }).id : undefined);
+          return orderCashRegisterId && String(orderCashRegisterId) === cashRegisterIdStr;
+        });
+        setOrders(filtered);
       } else {
         throw new Error(response.error || 'Erro ao carregar comandas');
       }
@@ -873,7 +904,7 @@ const Dashboard: React.FC = () => {
         setOpeningAmount('');
         setOpeningNotes('');
         toast.success('Caixa aberto com sucesso!');
-        loadActiveJumps(); // Recarrega os jumps
+        loadActiveJumps(response.data); // Recarrega os jumps do novo caixa
       } else {
         toast.error(response.error || 'Erro ao abrir caixa');
       }
@@ -2368,44 +2399,6 @@ const Dashboard: React.FC = () => {
     return end;
   };
 
-  const stats = useMemo(() => {
-    const total = activeJumps.length;
-    const paused = activeJumps.filter(j => j.is_paused).length;
-    
-    const { expired, warning, active } = activeJumps.reduce((acc, jump) => {
-        if (jump.is_paused) return acc;
-        
-        const start = new Date(jump.start_time);
-        const contractedMillis = jump.contracted_hours * 60 * 60 * 1000;
-        const originalEnd = new Date(start.getTime() + contractedMillis);
-        
-        // Para verificar se expirou, considerar o tempo pausado
-        const scheduledEndWithPause = calculateScheduledEndTime(jump.start_time, jump.contracted_hours, jump.time_extension_at, jump.total_paused_time);
-        if (currentTime >= scheduledEndWithPause) {
-          acc.expired++;
-          return acc;
-        }
-        
-        // Para cálculo de porcentagem, usar tempo original (sem pausas)
-        const totalDuration = originalEnd.getTime() - start.getTime();
-        let elapsed = currentTime.getTime() - start.getTime();
-        
-        // Desconta o tempo pausado do elapsed
-        if (jump.total_paused_time && jump.total_paused_time !== 'PT0S') {
-          const pausedSeconds = parseDuration(jump.total_paused_time);
-          elapsed -= pausedSeconds * 1000;
-        }
-        
-        const percentageElapsed = (elapsed / totalDuration) * 100;
-
-        if (percentageElapsed >= 50) acc.warning++;
-        else acc.active++;
-        return acc;
-    }, { expired: 0, warning: 0, active: 0 });
-
-    return { total, paused, expired, warning, active };
-  }, [activeJumps, currentTime]);
-
   const filteredJumps = useMemo(() => {
     let filtered = [...activeJumps];
 
@@ -2650,13 +2643,13 @@ const Dashboard: React.FC = () => {
     return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Recarrega as comandas sempre que filtros mudarem
+  // Recarrega as comandas sempre que filtros ou caixa mudarem
   useEffect(() => {
     if (activeTab === 'comandas') {
       loadOrders();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ordersDateFrom, ordersDateTo, ordersShowClosed, activeTab]);
+  }, [ordersDateFrom, ordersDateTo, ordersShowClosed, activeTab, currentCashRegister?.id]);
 
   // Scroll e destaque automático do cliente recém-criado
   useEffect(() => {
@@ -2754,13 +2747,6 @@ const Dashboard: React.FC = () => {
                   <FiDollarSign /> Fechar Caixa
                 </Button>
                 <Button
-                  variant="outline"
-                  size="medium"
-                  onClick={() => navigate('/customers')}
-                >
-                  <FiPlus /> Novo Cliente
-                </Button>
-                <Button
                   variant="primary"
                   size="medium"
                   onClick={handleOpenJumpModal}
@@ -2769,45 +2755,6 @@ const Dashboard: React.FC = () => {
                 </Button>
               </div>
             </div>
-
-        {/* Stats Cards */}
-        <div className="stats-grid">
-          <div className="stat-card stat-card--total">
-            <div className="stat-card__icon"><FiTrendingUp /></div>
-            <div className="stat-card__info">
-              <span className="stat-card__value">{stats.total}</span>
-              <span className="stat-card__label">Total Ativo</span>
-            </div>
-          </div>
-          <div className="stat-card stat-card--active">
-            <div className="stat-card__icon"><FiThumbsUp /></div>
-            <div className="stat-card__info">
-              <span className="stat-card__value">{stats.active}</span>
-              <span className="stat-card__label">Em Andamento</span>
-            </div>
-          </div>
-          <div className="stat-card stat-card--warning">
-            <div className="stat-card__icon"><FiClock /></div>
-            <div className="stat-card__info">
-              <span className="stat-card__value">{stats.warning}</span>
-              <span className="stat-card__label">Em Alerta</span>
-            </div>
-          </div>
-          <div className="stat-card stat-card--expired">
-            <div className="stat-card__icon"><FiAlertTriangle /></div>
-            <div className="stat-card__info">
-              <span className="stat-card__value">{stats.expired}</span>
-              <span className="stat-card__label">Expirado</span>
-            </div>
-          </div>
-          <div className="stat-card stat-card--paused">
-            <div className="stat-card__icon"><FiMoon /></div>
-            <div className="stat-card__info">
-              <span className="stat-card__value">{stats.paused}</span>
-              <span className="stat-card__label">Pausado</span>
-            </div>
-          </div>
-        </div>
 
         {success && (
           <Alert variant="success">
@@ -2845,12 +2792,42 @@ const Dashboard: React.FC = () => {
             <div className="section-header">
               <h2>Jumps em Andamento</h2>
               <span className="jump-count">{filteredJumps.length} de {activeJumps.length} {activeJumps.length === 1 ? 'jump' : 'jumps'}</span>
+              <button
+                className="jumps-expand-btn"
+                onClick={async () => {
+                  if (!currentCashRegister?.id) return;
+                  setShowJumpsExpandModal(true);
+                  setModalLoading(true);
+                  try {
+                    const response = await jumpUsageService.list(
+                      companyId ?? undefined,
+                      currentCashRegister.id
+                    );
+                    if (response.success && response.data) {
+                      const cashRegisterId = currentCashRegister.id;
+                      const finished = response.data.filter(
+                        (j: JumpUsage) =>
+                          j.finished && j.order_cash_register_id === cashRegisterId
+                      );
+                      setModalFinishedJumps(finished);
+                    }
+                  } catch (e) {
+                    console.error('Erro ao carregar jumps finalizados:', e);
+                    setModalFinishedJumps([]);
+                  } finally {
+                    setModalLoading(false);
+                  }
+                }}
+                title="Expandir em tela cheia"
+              >
+                <FiMaximize2 size={20} />
+                <span>Expandir</span>
+              </button>
             </div>
 
           {/* Barra de Pesquisa e Filtros */}
           <div className="jumps-filters">
             <div className="search-box">
-              <FiSearch />
               <input
                 type="text"
                 placeholder="Buscar por nome do cliente..."
@@ -3428,7 +3405,6 @@ const Dashboard: React.FC = () => {
 
         {/* Modal de Finalizar Jump */}
         {showFinishModal && selectedJump && (() => {
-          const status = getStatusIcon(selectedJump.start_time, selectedJump.contracted_hours, selectedJump.time_extension_at, selectedJump.time_extra_hours, selectedJump.is_paused, selectedJump.paused_at, selectedJump.total_paused_time);
           return (
             <div className="modal-overlay" onClick={handleCloseFinishModal}>
               <div className="modal-content jump-modal" onClick={(e) => e.stopPropagation()}>
@@ -3444,9 +3420,6 @@ const Dashboard: React.FC = () => {
                   <div className="modal-section">
                     <div className="jump-info-header">
                       <h3>{getDisplayName(selectedJump)}</h3>
-                      <div className="status-banner" style={{ backgroundColor: status.bgColor }}>
-                        <h4 style={{ color: status.color }}>{status.label}</h4>
-                      </div>
                     </div>
                     <div className="info-grid">
                       <div className="info-item">
@@ -4933,7 +4906,7 @@ const Dashboard: React.FC = () => {
                                       fontSize: '11px',
                                       fontWeight: 700
                                     }}>
-                                      #{ju.id}
+                                      #{ju.jump_number ?? (ju.id ? String(ju.id).slice(0, 8) : '-')}
                                     </span>
                                     {ju.dependente_name || ju.customer_name}
                                   </div>
@@ -6025,6 +5998,321 @@ const Dashboard: React.FC = () => {
       </div>
     )}
   </div>
+
+  {/* Modal fullscreen de Jumps */}
+  {showJumpsExpandModal && currentCashRegister && (
+    <div className="jumps-expand-modal">
+      <div className="jumps-expand-modal__content">
+        <button
+          className="jumps-expand-modal__close"
+          onClick={() => setShowJumpsExpandModal(false)}
+          aria-label="Fechar"
+        >
+          <FiX size={28} />
+        </button>
+        <div className="jumps-expand-modal__columns">
+          {/* Coluna 1: Em andamento - apenas do caixa atual */}
+          <div className="jumps-expand-modal__col">
+            <h3 className="jumps-expand-modal__col-title jumps-expand-modal__col-title--active">
+              Em Andamento
+            </h3>
+            <div className="jumps-expand-modal__col-list jumps-expand-modal__col-list--grid">
+              {activeJumps
+                .filter((j) => {
+                  if (j.order_cash_register_id && j.order_cash_register_id !== currentCashRegister.id) return false;
+                  if (j.finished || j.is_paused) return false;
+                  const rem = calculateRemainingTime(j.start_time, j.contracted_hours, j.time_extension_at, j.is_paused, j.paused_at, j.total_paused_time);
+                  return rem !== '00:00:00';
+                })
+                .map((jump) => {
+                  const status = getStatusIcon(jump.start_time, jump.contracted_hours, jump.time_extension_at, jump.time_extra_hours, jump.is_paused, jump.paused_at, jump.total_paused_time);
+                  const scheduledEnd = calculateScheduledEndTime(jump.start_time, jump.contracted_hours, jump.time_extension_at, jump.total_paused_time);
+                  const remainingTime = calculateRemainingTime(jump.start_time, jump.contracted_hours, jump.time_extension_at, jump.is_paused, jump.paused_at, jump.total_paused_time);
+                  return (
+                    <div
+                      key={jump.id}
+                      className={`jump-card ${status.cardClassName} jump-card--compact`}
+                      onClick={() => {
+                        setShowJumpsExpandModal(false);
+                        handleOpenFinishModal(jump);
+                      }}
+                    >
+                      <div className="card-status-bar" style={{ backgroundColor: status.bgColor }}></div>
+                      <div className="jump-card-content">
+                        <div className="jump-card-header">
+                          <h3 className="customer-name">{getDisplayName(jump)}</h3>
+                        </div>
+                        <div className="jump-card-body">
+                          {jump.order_number && (
+                            <div className="info-row">
+                              <FiShoppingCart className="info-icon" />
+                              <span className="info-label">Comanda:</span>
+                              <span className="info-value">#{jump.order_number}</span>
+                            </div>
+                          )}
+                          <div className="info-row">
+                            <FiCalendar className="info-icon" />
+                            <span className="info-label">Tempo:</span>
+                            <span className="info-value">{formatContractedHours(jump.contracted_hours)}</span>
+                          </div>
+                          <div className="info-row">
+                            <FiPlay className="info-icon" />
+                            <span className="info-label">Início:</span>
+                            <span className="info-value">{formatTime(new Date(jump.start_time))}</span>
+                          </div>
+                          <div className="info-row">
+                            <FiBarChart2 className="info-icon" />
+                            <span className="info-label">Fim Programado:</span>
+                            <span className="info-value">{formatTime(scheduledEnd)}</span>
+                          </div>
+                        </div>
+                        <div className="jump-card-footer">
+                          <div className="timer">
+                            <FiClock size={20} className="timer-icon" />
+                            <div className="timer-info">
+                              <span className="timer-label">Tempo Restante</span>
+                              <span className="timer-value">{remainingTime}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              {activeJumps.filter((j) => {
+                if (j.order_cash_register_id && j.order_cash_register_id !== currentCashRegister.id) return false;
+                if (j.finished || j.is_paused) return false;
+                const rem = calculateRemainingTime(j.start_time, j.contracted_hours, j.time_extension_at, j.is_paused, j.paused_at, j.total_paused_time);
+                return rem !== '00:00:00';
+              }).length === 0 && (
+                <div className="jumps-expand-modal__empty">Nenhum em andamento</div>
+              )}
+            </div>
+          </div>
+          {/* Coluna 2: Pausados */}
+          <div className="jumps-expand-modal__col">
+            <h3 className="jumps-expand-modal__col-title jumps-expand-modal__col-title--paused">
+              Pausados
+            </h3>
+            <div className="jumps-expand-modal__col-list jumps-expand-modal__col-list--grid">
+              {activeJumps
+                .filter((j) => {
+                  if (j.order_cash_register_id && j.order_cash_register_id !== currentCashRegister.id) return false;
+                  return !j.finished && j.is_paused;
+                })
+                .map((jump) => {
+                  const status = getStatusIcon(jump.start_time, jump.contracted_hours, jump.time_extension_at, jump.time_extra_hours, jump.is_paused, jump.paused_at, jump.total_paused_time);
+                  const scheduledEnd = calculateScheduledEndTime(jump.start_time, jump.contracted_hours, jump.time_extension_at, jump.total_paused_time);
+                  return (
+                    <div
+                      key={jump.id}
+                      className="jump-card jump-card--paused jump-card--compact"
+                      onClick={() => {
+                        setShowJumpsExpandModal(false);
+                        handleOpenFinishModal(jump);
+                      }}
+                    >
+                      <div className="paused-badge">
+                        <FiPause /> PAUSADO
+                      </div>
+                      <div className="card-status-bar" style={{ backgroundColor: status.bgColor }}></div>
+                      <div className="jump-card-content">
+                        <div className="jump-card-header">
+                          <h3 className="customer-name">{getDisplayName(jump)}</h3>
+                        </div>
+                        <div className="jump-card-body">
+                          {jump.order_number && (
+                            <div className="info-row">
+                              <FiShoppingCart className="info-icon" />
+                              <span className="info-label">Comanda:</span>
+                              <span className="info-value">#{jump.order_number}</span>
+                            </div>
+                          )}
+                          <div className="info-row">
+                            <FiCalendar className="info-icon" />
+                            <span className="info-label">Tempo:</span>
+                            <span className="info-value">{formatContractedHours(jump.contracted_hours)}</span>
+                          </div>
+                          <div className="info-row">
+                            <FiPlay className="info-icon" />
+                            <span className="info-label">Início:</span>
+                            <span className="info-value">{formatTime(new Date(jump.start_time))}</span>
+                          </div>
+                          <div className="info-row">
+                            <FiBarChart2 className="info-icon" />
+                            <span className="info-label">Fim Programado:</span>
+                            <span className="info-value">{formatTime(scheduledEnd)}</span>
+                          </div>
+                        </div>
+                        <div className="jump-card-footer">
+                          <div className="timer">
+                            <FiPause size={20} className="timer-icon" />
+                            <div className="timer-info">
+                              <span className="timer-label">PAUSADO</span>
+                              <span className="timer-value">PAUSADO</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              {activeJumps.filter((j) => {
+                if (j.order_cash_register_id && j.order_cash_register_id !== currentCashRegister.id) return false;
+                return !j.finished && j.is_paused;
+              }).length === 0 && (
+                <div className="jumps-expand-modal__empty">Nenhum pausado</div>
+              )}
+            </div>
+          </div>
+          {/* Coluna 3: Tempo esgotado */}
+          <div className="jumps-expand-modal__col">
+            <h3 className="jumps-expand-modal__col-title jumps-expand-modal__col-title--expired">
+              Tempo Esgotado
+            </h3>
+            <div className="jumps-expand-modal__col-list jumps-expand-modal__col-list--grid">
+              {activeJumps
+                .filter((j) => {
+                  if (j.order_cash_register_id && j.order_cash_register_id !== currentCashRegister.id) return false;
+                  if (j.finished || j.is_paused) return false;
+                  const rem = calculateRemainingTime(j.start_time, j.contracted_hours, j.time_extension_at, j.is_paused, j.paused_at, j.total_paused_time);
+                  return rem === '00:00:00';
+                })
+                .map((jump) => {
+                  const status = getStatusIcon(jump.start_time, jump.contracted_hours, jump.time_extension_at, jump.time_extra_hours, jump.is_paused, jump.paused_at, jump.total_paused_time);
+                  const scheduledEnd = calculateScheduledEndTime(jump.start_time, jump.contracted_hours, jump.time_extension_at, jump.total_paused_time);
+                  return (
+                    <div
+                      key={jump.id}
+                      className={`jump-card ${status.cardClassName} jump-card--compact`}
+                      onClick={() => {
+                        setShowJumpsExpandModal(false);
+                        handleOpenFinishModal(jump);
+                      }}
+                    >
+                      <div className="card-status-bar" style={{ backgroundColor: status.bgColor }}></div>
+                      <div className="jump-card-content">
+                        <div className="jump-card-header">
+                          <h3 className="customer-name">{getDisplayName(jump)}</h3>
+                        </div>
+                        <div className="jump-card-body">
+                          {jump.order_number && (
+                            <div className="info-row">
+                              <FiShoppingCart className="info-icon" />
+                              <span className="info-label">Comanda:</span>
+                              <span className="info-value">#{jump.order_number}</span>
+                            </div>
+                          )}
+                          <div className="info-row">
+                            <FiCalendar className="info-icon" />
+                            <span className="info-label">Tempo:</span>
+                            <span className="info-value">{formatContractedHours(jump.contracted_hours)}</span>
+                          </div>
+                          <div className="info-row">
+                            <FiPlay className="info-icon" />
+                            <span className="info-label">Início:</span>
+                            <span className="info-value">{formatTime(new Date(jump.start_time))}</span>
+                          </div>
+                          <div className="info-row">
+                            <FiBarChart2 className="info-icon" />
+                            <span className="info-label">Fim Programado:</span>
+                            <span className="info-value">{formatTime(scheduledEnd)}</span>
+                          </div>
+                        </div>
+                        <div className="jump-card-footer">
+                          <div className="timer">
+                            <FiClock size={20} className="timer-icon" />
+                            <div className="timer-info">
+                              <span className="timer-label">TEMPO ESGOTADO</span>
+                              <span className="timer-value">TEMPO ESGOTADO</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              {activeJumps.filter((j) => {
+                if (j.order_cash_register_id && j.order_cash_register_id !== currentCashRegister.id) return false;
+                if (j.finished || j.is_paused) return false;
+                const rem = calculateRemainingTime(j.start_time, j.contracted_hours, j.time_extension_at, j.is_paused, j.paused_at, j.total_paused_time);
+                return rem === '00:00:00';
+              }).length === 0 && (
+                <div className="jumps-expand-modal__empty">Nenhum tempo esgotado</div>
+              )}
+            </div>
+          </div>
+          {/* Coluna 4: Finalizados */}
+          <div className="jumps-expand-modal__col">
+            <h3 className="jumps-expand-modal__col-title jumps-expand-modal__col-title--finished">
+              Finalizados
+            </h3>
+            <div className="jumps-expand-modal__col-list jumps-expand-modal__col-list--grid">
+              {modalLoading ? (
+                <div className="jumps-expand-modal__empty">Carregando...</div>
+              ) : (
+                <>
+                  {modalFinishedJumps
+                    .slice()
+                    .sort((a, b) => new Date(b.end_time || b.updated_at).getTime() - new Date(a.end_time || a.updated_at).getTime())
+                    .slice(0, 50)
+                    .map((jump) => (
+                        <div
+                          key={jump.id}
+                          className="jump-card jump-card--finished-modal jump-card--compact"
+                        >
+                          <div className="card-status-bar" style={{ backgroundColor: '#22c55e' }}></div>
+                          <div className="jump-card-content">
+                            <div className="jump-card-header">
+                              <h3 className="customer-name">{getDisplayName(jump)}</h3>
+                            </div>
+                            <div className="jump-card-body">
+                              {jump.order_number && (
+                                <div className="info-row">
+                                  <FiShoppingCart className="info-icon" />
+                                  <span className="info-label">Comanda:</span>
+                                  <span className="info-value">#{jump.order_number}</span>
+                                </div>
+                              )}
+                              <div className="info-row">
+                                <FiCalendar className="info-icon" />
+                                <span className="info-label">Tempo:</span>
+                                <span className="info-value">{jump.total_hours || formatContractedHours(jump.contracted_hours)}</span>
+                              </div>
+                              <div className="info-row">
+                                <FiPlay className="info-icon" />
+                                <span className="info-label">Início:</span>
+                                <span className="info-value">{formatTime(new Date(jump.start_time))}</span>
+                              </div>
+                              <div className="info-row">
+                                <FiBarChart2 className="info-icon" />
+                                <span className="info-label">Fim:</span>
+                                <span className="info-value">{jump.end_time ? formatTime(new Date(jump.end_time)) : '-'}</span>
+                              </div>
+                            </div>
+                            <div className="jump-card-footer">
+                              <div className="timer">
+                                <FiCheckCircle size={20} className="timer-icon" />
+                                <div className="timer-info">
+                                  <span className="timer-label">Finalizado</span>
+                                  <span className="timer-value">{jump.total_hours || '-'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                    ))}
+                  {!modalLoading && modalFinishedJumps.length === 0 && (
+                    <div className="jumps-expand-modal__empty">Nenhum finalizado</div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
 </Layout>
 );
 };

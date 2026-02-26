@@ -198,6 +198,16 @@ async function createWindow() {
     mainWindow.loadFile(loadingUrl);
   }
 
+  // Bloquear F12 e atalhos de DevTools
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    const devToolsKeys = input.key === "F12"
+      || (input.control && input.shift && input.key.toLowerCase() === "i")
+      || (input.control && input.shift && input.key.toLowerCase() === "j");
+    if (devToolsKeys) {
+      event.preventDefault();
+    }
+  });
+
   mainWindow.webContents.once("did-finish-load", () => {
     runBackendWithProgress()
       .then(() => {
@@ -223,14 +233,6 @@ async function createWindow() {
       });
   });
 
-  mainWindow.webContents.on("before-input-event", (event, input) => {
-    const devToolsKeys = input.key === "F12"
-      || (input.control && input.shift && input.key.toLowerCase() === "i")
-      || (input.control && input.shift && input.key.toLowerCase() === "j");
-    if (devToolsKeys) {
-      event.preventDefault();
-    }
-  });
 
   mainWindow.on("closed", () => {
     mainWindow = null;

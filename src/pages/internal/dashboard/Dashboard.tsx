@@ -482,18 +482,36 @@ const Dashboard: React.FC = () => {
     if (!companyId) {
       console.error('Dashboard: companyId is undefined. userData:', userData, 'selectedCompany:', selectedCompany);
       setError('Empresa não identificada. Por favor, faça login novamente.');
+      setLoading(false);
       return;
     }
     
-    // Verificar assinatura ao carregar o dashboard (primeira vez)
-    checkSubscription(true);
+    let cancelled = false;
     
-    loadCurrentCashRegister();
-    loadOrders();
-    loadFiscalPrinter();
-    loadA4Printer();
-    loadCompanyUsers();
-    loadPaymentTypes();
+    const loadInitialData = async () => {
+      try {
+        // Verificar assinatura ao carregar o dashboard (primeira vez)
+        checkSubscription(true);
+        
+        await loadCurrentCashRegister();
+        if (cancelled) return;
+        
+        loadOrders();
+        loadFiscalPrinter();
+        loadA4Printer();
+        loadCompanyUsers();
+        loadPaymentTypes();
+      } catch (err) {
+        console.error('Erro ao carregar dados iniciais do dashboard:', err);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    loadInitialData();
+    
     // Atualizar o timer a cada segundo
     const interval = setInterval(() => {
       setCurrentTime(new Date());
@@ -505,6 +523,7 @@ const Dashboard: React.FC = () => {
     }, 60 * 60 * 1000); // 1 hora
 
     return () => {
+      cancelled = true;
       clearInterval(interval);
       clearInterval(subscriptionInterval);
     };
